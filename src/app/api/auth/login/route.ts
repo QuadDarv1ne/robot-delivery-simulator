@@ -3,8 +3,16 @@ import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 import { cookies } from 'next/headers'
 import { randomUUID } from 'crypto'
+import { rateLimit, createRateLimitResponse, rateLimits } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
+  // Rate limiting для auth endpoints
+  const limit = rateLimit(request, rateLimits.auth)
+  
+  if (limit.limited) {
+    return createRateLimitResponse(limit.resetTime)
+  }
+
   try {
     const { email, password } = await request.json()
 
@@ -67,7 +75,7 @@ export async function POST(request: NextRequest) {
       expires: expiresAt
     })
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       user: {
         id: user.id,
         email: user.email,
@@ -80,6 +88,13 @@ export async function POST(request: NextRequest) {
         totalDistance: user.totalDistance
       }
     })
+
+    // Add rate limit headers
+    response.headers.set('X-RateLimit-Limit', rateLimits.auth.maxRequests.toString())
+    response.headers.set('X-RateLimit-Remaining', limit.remaining.toString())
+    response.headers.set('X-RateLimit-Reset', limit.resetTime.toString())
+
+    return response
   } catch (error) {
     console.error('Login error:', error)
     return NextResponse.json(
