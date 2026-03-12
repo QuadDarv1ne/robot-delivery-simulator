@@ -345,9 +345,10 @@ print("PDF_GENERATED_SUCCESS")
         fs.unlinkSync(scriptPath)
         scriptPath = null
       }
-      if (outputPath && fs.existsSync(outputPath)) {
+      if (outputPath) {
+        const pathToDelete = outputPath;
         setTimeout(() => {
-          try { if (outputPath) fs.unlinkSync(outputPath) } catch {}
+          try { if (fs.existsSync(pathToDelete)) fs.unlinkSync(pathToDelete) } catch {}
         }, 10000)
       }
     } catch {}
