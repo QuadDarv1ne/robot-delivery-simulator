@@ -1,0 +1,190 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  password      String?
+  role          String   @default("student") // student, teacher, admin
+  group         String?  // Учебная группа
+  avatar        String?
+  emailVerified DateTime?
+  
+  // Statistics
+  totalDeliveries  Int      @default(0)
+  successRate      Float    @default(0)
+  totalDistance    Float    @default(0)
+  totalCollisions  Int      @default(0)
+  averageTime      Float    @default(0)
+  bestTime         Float?
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastActiveAt  DateTime @default(now())
+  
+  // Relations
+  sessions      UserSession[]
+  deliveries    DeliveryResult[]
+  algorithms    Algorithm[]
+  achievements  Achievement[]
+  scenarios     DeliveryScenario[]
+}
+
+model UserSession {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token        String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  
+  // Session data
+  ipAddress    String?
+  userAgent    String?
+}
+
+model DeliveryResult {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  algorithmId     String?
+  algorithm       Algorithm? @relation(fields: [algorithmId], references: [id], onDelete: SetNull)
+  scenarioId      String?
+  scenario        DeliveryScenario? @relation(fields: [scenarioId], references: [id], onDelete: SetNull)
+  
+  // Scenario info
+  scenarioName    String   @default("Custom Scenario")
+  
+  // Results
+  status          String   // success, failed, cancelled
+  distance        Float    @default(0)
+  batteryUsed     Float    @default(0)
+  collisions      Int      @default(0)
+  duration        Int      @default(0) // seconds
+  
+  // Detailed metrics
+  efficiencyScore Float?   // 0-100
+  safetyScore     Float?   // 0-100
+  speedScore      Float?   // 0-100
+  
+  // Timestamps
+  startTime       DateTime @default(now())
+  endTime         DateTime @default(now())
+  createdAt       DateTime @default(now())
+}
+
+model Algorithm {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Algorithm info
+  name        String
+  description String?
+  language    String   // python, javascript, c#
+  code        String
+  
+  // Status
+  isPublic    Boolean  @default(false)
+  isApproved  Boolean  @default(false)
+  
+  // Statistics
+  runsCount   Int      @default(0)
+  avgScore    Float    @default(0)
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  deliveryResults DeliveryResult[]
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Achievement info
+  type        String   // first_delivery, perfect_run, speed_demon, etc.
+  name        String
+  description String?
+  icon        String?
+  
+  earnedAt    DateTime @default(now())
+}
+
+model DeliveryScenario {
+  id          String   @id @default(cuid())
+  createdById String?
+  creator     User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  
+  // Scenario info
+  name        String
+  description String?
+  difficulty  String   @default("medium")  // easy, medium, hard
+  distance    Float    @default(1000)
+  timeLimit   Int      @default(300)  // seconds
+  
+  // Environment
+  weather     String   @default("sunny")  // sunny, rainy, snowy
+  traffic     String   @default("low")    // low, medium, high
+  
+  // Route points (JSON)
+  startPoint  String   // JSON: {lat, lon, name}
+  endPoint    String   // JSON: {lat, lon, name}
+  waypoints   String   @default("[]") // JSON array
+  obstacles   String   @default("[]") // JSON array
+  
+  // Status
+  isPublic    Boolean  @default(true)
+  isActive    Boolean  @default(true)
+  
+  // Stats
+  playsCount  Int      @default(0)
+  avgScore    Float    @default(0)
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  deliveryResults DeliveryResult[]
+}
+
+model PasswordResetToken {
+  id           String   @id @default(cuid())
+  email        String
+  token        String   @unique
+  expiresAt    DateTime
+  used         Boolean  @default(false)
+  createdAt    DateTime @default(now())
+}
+
+model EmailVerificationToken {
+  id           String   @id @default(cuid())
+  email        String
+  token        String   @unique
+  expiresAt    DateTime
+  used         Boolean  @default(false)
+  createdAt    DateTime @default(now())
+}
+
+model SystemSettings {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+}

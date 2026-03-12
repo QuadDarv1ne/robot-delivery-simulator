@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # Main Next.js Application
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: robot-simulator-app
+    ports:
+      - "3000:3000"
+      - "3003:3003"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/data/production.db
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-change-me-in-production}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+    volumes:
+      - sqlite-data:/app/data
+      - uploads-data:/app/public/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - robot-network
+
+  # Development service (optional)
+  app-dev:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    container_name: robot-simulator-dev
+    ports:
+      - "3000:3000"
+      - "3003:3003"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=file:/app/data/dev.db
+      - NEXTAUTH_SECRET=dev-secret-key
+      - NEXTAUTH_URL=http://localhost:3000
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - sqlite-dev-data:/app/data
+    profiles:
+      - dev
+    networks:
+      - robot-network
+
+  # Nginx Reverse Proxy (production)
+  nginx:
+    image: nginx:alpine
+    container_name: robot-simulator-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - app
+    profiles:
+      - production
+    restart: unless-stopped
+    networks:
+      - robot-network
+
+volumes:
+  sqlite-data:
+  sqlite-dev-data:
+  uploads-data:
+
+networks:
+  robot-network:
+    driver: bridge

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://docs.robotsimulator.dev
+    about: Check the documentation before opening an issue
+  - name: 💬 Discord Community
+    url: https://discord.gg/robotsimulator
+    about: Join our Discord community for discussions and support
+  - name: 📧 Email Support
+    url: mailto:support@robotsimulator.dev
+    about: Email us for private support inquiries

@@ -1,0 +1,58 @@
+import { NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+import { cookies } from 'next/headers'
+
+export async function GET() {
+  try {
+    const cookieStore = await cookies()
+    const token = cookieStore.get('session_token')?.value
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Не авторизован' },
+        { status: 401 }
+      )
+    }
+
+    // Find session
+    const session = await db.userSession.findUnique({
+      where: { token },
+      include: { user: true }
+    })
+
+    if (!session || session.expiresAt < new Date()) {
+      // Delete expired session
+      if (session) {
+        await db.userSession.delete({ where: { token } })
+      }
+      cookieStore.delete('session_token')
+      return NextResponse.json(
+        { error: 'Сессия истекла' },
+        { status: 401 }
+      )
+    }
+
+    return NextResponse.json({
+      user: {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+        role: session.user.role,
+        group: session.user.group,
+        avatar: session.user.avatar,
+        totalDeliveries: session.user.totalDeliveries,
+        successRate: session.user.successRate,
+        totalDistance: session.user.totalDistance,
+        totalCollisions: session.user.totalCollisions,
+        averageTime: session.user.averageTime,
+        bestTime: session.user.bestTime
+      }
+    })
+  } catch (error) {
+    console.error('Get user error:', error)
+    return NextResponse.json(
+      { error: 'Ошибка сервера' },
+      { status: 500 }
+    )
+  }
+}

@@ -1,0 +1,32 @@
+# Development Dockerfile for Robot Delivery Simulator
+# Optimized for development with hot reload
+
+FROM node:20-alpine
+
+# Install necessary tools
+RUN apk add --no-cache libc6-compat openssl
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json* ./
+
+# Install all dependencies (including devDependencies)
+RUN npm install
+
+# Copy Prisma schema and generate client
+COPY prisma ./prisma/
+RUN npx prisma generate
+
+# Copy source code
+COPY . .
+
+# Expose ports
+EXPOSE 3000 3003
+
+# Set environment
+ENV NODE_ENV development
+ENV NEXT_TELEMETRY_DISABLED 1
+
+# Start development server
+CMD ["npm", "run", "dev"]

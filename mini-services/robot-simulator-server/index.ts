@@ -1,0 +1,234 @@
+import { createServer } from 'http'
+import { Server } from 'socket.io'
+
+const httpServer = createServer()
+const io = new Server(httpServer, {
+  path: '/',
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  },
+  pingTimeout: 60000,
+  pingInterval: 25000,
+})
+
+// Types
+interface RobotState {
+  position: { x: number; y: number; z: number }
+  rotation: { x: number; y: number; z: number }
+  velocity: { x: number; y: number; z: number }
+  battery: number
+  status: 'idle' | 'moving' | 'delivering' | 'charging' | 'error'
+}
+
+interface SensorData {
+  gps: { lat: number; lon: number; altitude: number; accuracy: number }
+  lidar: { distances: number[]; angles: number[]; timestamp: number }
+  cameras: { front: string; back: string; left: string; right: string }
+  encoders: { leftWheel: number; rightWheel: number }
+  imu: { acceleration: { x: number; y: number; z: number }; gyro: { x: number; y: number; z: number } }
+}
+
+interface ControlCommand {
+  type: 'move' | 'stop' | 'setSpeed' | 'setDestination'
+  data: Record<string, unknown>
+}
+
+// Simulated robot state
+let robotState: RobotState = {
+  position: { x: 0, y: 0, z: 0 },
+  rotation: { x: 0, y: 0, z: 0 },
+  velocity: { x: 0, y: 0, z: 0 },
+  battery: 85,
+  status: 'idle'
+}
+
+// Generate simulated sensor data
+function generateSensorData(): SensorData {
+  const now = Date.now()
+  
+  // Simulate GPS data
+  const gps = {
+    lat: 55.7558 + Math.sin(now / 10000) * 0.001,
+    lon: 37.6173 + Math.cos(now / 10000) * 0.001,
+    altitude: 150 + Math.random() * 5,
+    accuracy: 2 + Math.random() * 3
+  }
+  
+  // Simulate Lidar data (360 degrees scan)
+  const lidarDistances: number[] = []
+  const lidarAngles: number[] = []
+  for (let i = 0; i < 360; i += 5) {
+    lidarAngles.push(i)
+    lidarDistances.push(5 + Math.random() * 20)
+  }
+  const lidar = { distances: lidarDistances, angles: lidarAngles, timestamp: now }
+  
+  // Camera feeds (placeholder URLs)
+  const cameras = {
+    front: `/api/camera/front?t=${now}`,
+    back: `/api/camera/back?t=${now}`,
+    left: `/api/camera/left?t=${now}`,
+    right: `/api/camera/right?t=${now}`
+  }
+  
+  // Wheel encoders
+  const encoders = {
+    leftWheel: Math.floor(now / 100) % 10000,
+    rightWheel: Math.floor(now / 100 + Math.random() * 100) % 10000
+  }
+  
+  // IMU data
+  const imu = {
+    acceleration: {
+      x: Math.sin(now / 1000) * 0.1,
+      y: Math.cos(now / 1000) * 0.1,
+      z: 9.81 + Math.random() * 0.1
+    },
+    gyro: {
+      x: Math.sin(now / 2000) * 0.05,
+      y: Math.cos(now / 2000) * 0.05,
+      z: Math.sin(now / 3000) * 0.02
+    }
+  }
+  
+  return { gps, lidar, cameras, encoders, imu }
+}
+
+// Update robot state
+function updateRobotState() {
+  const now = Date.now()
+  
+  if (robotState.status === 'moving') {
+    robotState.position.x += Math.sin(now / 1000) * 0.1
+    robotState.position.z += Math.cos(now / 1000) * 0.1
+    robotState.rotation.y = (now / 1000) % 360
+  }
+  
+  // Simulate battery drain
+  if (robotState.status !== 'charging') {
+    robotState.battery = Math.max(0, robotState.battery - 0.001)
+  } else {
+    robotState.battery = Math.min(100, robotState.battery + 0.1)
+  }
+}
+
+// Store connected clients
+const clients = new Map<string, { id: string; type: 'simulator' | 'controller' | 'viewer' }>()
+
+// Broadcast sensor data periodically
+setInterval(() => {
+  updateRobotState()
+  const sensorData = generateSensorData()
+  io.emit('sensor-data', { sensorData, robotState, timestamp: Date.now() })
+}, 100) // 10 Hz update rate
+
+io.on('connection', (socket) => {
+  console.log(`Client connected: ${socket.id}`)
+  
+  // Register client
+  socket.on('register', (data: { type: 'simulator' | 'controller' | 'viewer' }) => {
+    clients.set(socket.id, { id: socket.id, type: data.type })
+    console.log(`Client ${socket.id} registered as ${data.type}`)
+    
+    // Send initial state
+    socket.emit('robot-state', robotState)
+    socket.emit('sensor-data', { sensorData: generateSensorData(), robotState, timestamp: Date.now() })
+  })
+  
+  // Control commands from external systems
+  socket.on('control', (command: ControlCommand) => {
+    console.log(`Control command received:`, command)
+    
+    switch (command.type) {
+      case 'move':
+        robotState.status = 'moving'
+        robotState.velocity = command.data.velocity as { x: number; y: number; z: number }
+        break
+      case 'stop':
+        robotState.status = 'idle'
+        robotState.velocity = { x: 0, y: 0, z: 0 }
+        break
+      case 'setSpeed':
+        // Update speed settings
+        break
+      case 'setDestination':
+        robotState.status = 'moving'
+        break
+    }
+    
+    // Broadcast updated state
+    io.emit('robot-state', robotState)
+  })
+  
+  // ROS Bridge protocol
+  socket.on('ros-topic', (data: { topic: string; message: unknown }) => {
+    // Forward ROS messages to simulator
+    io.emit('ros-message', data)
+  })
+  
+  // Unity WebGL events
+  socket.on('unity-event', (data: { event: string; payload: unknown }) => {
+    console.log(`Unity event: ${data.event}`, data.payload)
+    io.emit('unity-event', data)
+  })
+  
+  // API commands
+  socket.on('api-command', async (data: { command: string; params: Record<string, unknown> }) => {
+    const response = { success: true, data: null as unknown, error: null as string | null }
+    
+    try {
+      switch (data.command) {
+        case 'getStatus':
+          response.data = robotState
+          break
+        case 'getSensors':
+          response.data = generateSensorData()
+          break
+        case 'setMode':
+          robotState.status = data.params.mode as RobotState['status']
+          response.data = robotState
+          break
+        default:
+          response.success = false
+          response.error = `Unknown command: ${data.command}`
+      }
+    } catch (error) {
+      response.success = false
+      response.error = String(error)
+    }
+    
+    socket.emit('api-response', { requestId: data.params.requestId, ...response })
+  })
+  
+  socket.on('disconnect', () => {
+    clients.delete(socket.id)
+    console.log(`Client disconnected: ${socket.id}`)
+  })
+  
+  socket.on('error', (error) => {
+    console.error(`Socket error (${socket.id}):`, error)
+  })
+})
+
+const PORT = 3003
+httpServer.listen(PORT, () => {
+  console.log(`Robot Simulator WebSocket server running on port ${PORT}`)
+})
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('Received SIGTERM signal, shutting down server...')
+  httpServer.close(() => {
+    console.log('WebSocket server closed')
+    process.exit(0)
+  })
+})
+
+process.on('SIGINT', () => {
+  console.log('Received SIGINT signal, shutting down server...')
+  httpServer.close(() => {
+    console.log('WebSocket server closed')
+    process.exit(0)
+  })
+})
