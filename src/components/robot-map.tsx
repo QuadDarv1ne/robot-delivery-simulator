@@ -1,9 +1,38 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from 'react-leaflet'
+import { useEffect, useMemo, memo } from 'react'
+import dynamic from 'next/dynamic'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+
+// Dynamic import leaflet components to avoid SSR issues
+const MapContainer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.MapContainer),
+  { ssr: false }
+)
+const TileLayer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.TileLayer),
+  { ssr: false }
+)
+const Marker = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Marker),
+  { ssr: false }
+)
+const Popup = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Popup),
+  { ssr: false }
+)
+const Polyline = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Polyline),
+  { ssr: false }
+)
+const Circle = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Circle),
+  { ssr: false }
+)
+
+// useMap must be imported directly (it's a hook)
+import { useMap } from 'react-leaflet'
 
 // Fix for default marker icons in Next.js
 const robotIcon = L.divIcon({
@@ -142,8 +171,8 @@ function LidarLayer({
   )
 }
 
-export function RobotMap({ 
-  robotPosition, 
+export const RobotMap = memo(function RobotMap({
+  robotPosition,
   robotHeading = 0,
   destination,
   waypoints = [],
@@ -155,19 +184,19 @@ export function RobotMap({
     robotPosition.lat,
     robotPosition.lon
   ], [robotPosition.lat, robotPosition.lon])
-  
+
   // Generate path from robot to destination
   const fullPath = useMemo(() => {
     const points: [number, number][] = [[robotPosition.lat, robotPosition.lon]]
-    
+
     waypoints.forEach(wp => {
       points.push([wp.lat, wp.lon])
     })
-    
+
     if (destination) {
       points.push([destination.lat, destination.lon])
     }
-    
+
     return points
   }, [robotPosition, waypoints, destination])
   
@@ -286,7 +315,7 @@ export function RobotMap({
           </Popup>
         </Marker>
       )}
-      
+
       {/* Robot marker */}
       <Marker position={center} icon={robotIcon}>
         <Popup>
@@ -300,4 +329,4 @@ export function RobotMap({
       </Marker>
     </MapContainer>
   )
-}
+})

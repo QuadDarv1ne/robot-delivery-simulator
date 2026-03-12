@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useMemo } from 'react'
+import { useRef, useMemo, memo, useCallback } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Grid, PerspectiveCamera, Line, Text } from '@react-three/drei'
 import * as THREE from 'three'
@@ -12,18 +12,18 @@ interface PointCloudProps {
   pointSize?: number
 }
 
-// Single lidar point
-function LidarPoint({ 
-  position, 
-  distance, 
-  maxDistance 
-}: { 
+// Single lidar point - memoized
+const LidarPoint = memo(function LidarPoint({
+  position,
+  distance,
+  maxDistance
+}: {
   position: [number, number, number]
   distance: number
   maxDistance: number
 }) {
   const meshRef = useRef<THREE.Mesh>(null)
-  
+
   // Color based on distance
   const color = useMemo(() => {
     const ratio = distance / maxDistance
@@ -38,7 +38,7 @@ function LidarPoint({
       <meshBasicMaterial color={color} />
     </mesh>
   )
-}
+})
 
 // Lidar scanner visualization
 function LidarScanner({ rotation }: { rotation: number }) {
@@ -221,7 +221,7 @@ function Scene({ distances, angles }: { distances: number[]; angles: number[] })
   )
 }
 
-export function Lidar3DView({ distances, angles }: PointCloudProps) {
+export const Lidar3DView = memo(function Lidar3DView({ distances, angles }: PointCloudProps) {
   return (
     <div className="w-full h-full min-h-[300px] bg-slate-900 rounded-lg">
       <Canvas shadows>
@@ -230,6 +230,6 @@ export function Lidar3DView({ distances, angles }: PointCloudProps) {
       </Canvas>
     </div>
   )
-}
+})
 
 export default Lidar3DView
