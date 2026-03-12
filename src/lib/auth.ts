@@ -2,6 +2,25 @@ import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { db } from "./db"
 import { randomBytes, randomUUID } from "crypto"
+import type { DefaultSession } from "next-auth"
+
+// Extend NextAuth session type
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string
+      role: string
+      group?: string | null
+    } & DefaultSession["user"]
+  }
+  
+  interface User {
+    id: string
+    role: string
+    group?: string | null
+    avatar?: string | null
+  }
+}
 
 // Simple password hashing (in production use bcrypt)
 function hashPassword(password: string): string {
@@ -101,17 +120,17 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id
-        token.role = user.role
-        token.group = user.group
+        token.id = (user as any).id
+        token.role = (user as any).role
+        token.group = (user as any).group
       }
       return token
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string
-        session.user.role = token.role as string
-        session.user.group = token.group as string
+        (session.user as any).id = token.id as string
+        (session.user as any).role = token.role as string
+        (session.user as any).group = token.group as string
       }
       return session
     }

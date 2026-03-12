@@ -149,20 +149,20 @@ const sampleSessionLogs: SessionLog[] = [
 const COLORS = ['#22c55e', '#ef4444', '#f59e0b']
 
 // Stats Cards
-function StatCard({ 
-  title, 
-  value, 
-  subtitle, 
-  icon: Icon, 
+function StatCard({
+  title,
+  value,
+  subtitle,
+  icon: Icon,
   trend,
   color = 'text-primary'
-}: { 
+}: {
   title: string
   value: string | number
   subtitle?: string
-  icon: React.ElementType
+  icon: React.ElementType<{ className?: string }>
   trend?: 'up' | 'down' | 'neutral'
-  color?: string
+  color?: 'text-primary' | 'text-green-500' | 'text-red-500' | 'text-blue-500' | 'text-yellow-500' | 'text-purple-500'
 }) {
   return (
     <Card>

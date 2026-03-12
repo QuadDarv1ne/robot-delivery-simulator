@@ -1,6 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
+interface LeaderboardUser {
+  id: string
+  name: string | null
+  email: string
+  group: string | null
+  avatar: string | null
+  totalDeliveries: number
+  successfulDeliveries: number
+  successRate: number
+  totalDistance: number
+  totalCollisions: number
+  avgDuration: number
+  bestTime: number | null
+  achievements: number
+  score: number
+  rank?: number
+  previousRank?: number | null
+}
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -55,26 +74,26 @@ export async function GET(request: NextRequest) {
     })
 
     // Calculate stats for each user
-    const leaderboard = users.map(user => {
+    const leaderboard: LeaderboardUser[] = users.map(user => {
       const deliveries = user.deliveries
       const totalDeliveries = deliveries.length
       const successfulDeliveries = deliveries.filter(d => d.status === 'success').length
       const successRate = totalDeliveries > 0 ? (successfulDeliveries / totalDeliveries) * 100 : 0
       const totalDistance = deliveries.reduce((sum, d) => sum + (d.distance || 0), 0)
       const totalCollisions = deliveries.reduce((sum, d) => sum + (d.collisions || 0), 0)
-      const avgDuration = totalDeliveries > 0 
-        ? deliveries.reduce((sum, d) => sum + (d.duration || 0), 0) / totalDeliveries 
+      const avgDuration = totalDeliveries > 0
+        ? deliveries.reduce((sum, d) => sum + (d.duration || 0), 0) / totalDeliveries
         : 0
-      const bestTime = deliveries.length > 0 
+      const bestTime = deliveries.length > 0
         ? Math.min(...deliveries.filter(d => d.status === 'success').map(d => d.duration || Infinity))
         : null
 
       // Calculate score
       // Score formula: success% * 100 + deliveries * 10 + distance/100 - collisions * 5 + achievements * 20
       const score = Math.round(
-        successRate * 100 + 
-        totalDeliveries * 10 + 
-        totalDistance / 100 - 
+        successRate * 100 +
+        totalDeliveries * 10 +
+        totalDistance / 100 -
         totalCollisions * 5 +
         user._count.achievements * 20
       )
@@ -116,14 +135,14 @@ export async function GET(request: NextRequest) {
 
     // Get current user position (if authenticated)
     const currentUserId = request.headers.get('x-user-id')
-    let currentUserPosition = null
+    let currentUserPosition: LeaderboardUser | null = null
     if (currentUserId) {
       const allSorted = leaderboard.sort((a, b) => b.score - a.score)
       const position = allSorted.findIndex(u => u.id === currentUserId)
       if (position !== -1) {
         currentUserPosition = {
-          rank: position + 1,
-          ...allSorted[position]
+          ...allSorted[position],
+          rank: position + 1
         }
       }
     }

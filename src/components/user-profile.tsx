@@ -196,9 +196,9 @@ export function UserProfile({ onLogout }: UserProfileProps) {
             <div>
               <div className="flex justify-between text-xs mb-1">
                 <span className="text-muted-foreground">Безопасность</span>
-                <span>{user.totalCollisions === 0 ? 100 : Math.max(0, 100 - user.totalCollisions * 10)}%</span>
+                <span>{(user.totalCollisions ?? 0) === 0 ? 100 : Math.max(0, 100 - (user.totalCollisions ?? 0) * 10)}%</span>
               </div>
-              <Progress value={user.totalCollisions === 0 ? 100 : Math.max(0, 100 - user.totalCollisions * 10)} className="h-1" />
+              <Progress value={(user.totalCollisions ?? 0) === 0 ? 100 : Math.max(0, 100 - (user.totalCollisions ?? 0) * 10)} className="h-1" />
             </div>
           </div>
         </div>
