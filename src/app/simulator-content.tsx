@@ -273,23 +273,26 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
   useEffect(() => {
     const socket = io('/?XTransformPort=3003', { path: '/', transports: ['websocket', 'polling'] })
     socketRef.current = socket
-    
+
     socket.on('connect', () => {
       socket.emit('register', { type: 'viewer' })
       setState(prev => ({ ...prev, isConnected: true }))
     })
-    
+
     socket.on('disconnect', () => setState(prev => ({ ...prev, isConnected: false })))
-    
+
     socket.on('sensor-data', (data: { sensorData: SensorData; robotState: RobotState }) => {
       setState(prev => ({ ...prev, sensorData: data.sensorData, robotState: data.robotState }))
     })
-    
+
     socket.on('robot-state', (robotState: RobotState) => {
       setState(prev => ({ ...prev, robotState }))
     })
-    
-    return () => socket.disconnect()
+
+    return () => {
+      socket.disconnect()
+      socketRef.current = null
+    }
   }, [])
   
   const sendCommand = useCallback((type: string, data?: Record<string, unknown>) => {
@@ -583,7 +586,7 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
                 {!selectedScenario ? (
                   <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-sm">Сценарии доставки</CardTitle><CardDescription>Выберите миссию</CardDescription></CardHeader>
-                    <CardContent><ScenarioSelector onSelect={handleSelectScenario} selectedId={selectedScenario?.id} /></CardContent>
+                    <CardContent><ScenarioSelector onSelect={handleSelectScenario} selectedId={selectedScenario ? (selectedScenario as DeliveryScenario).id : undefined} /></CardContent>
                   </Card>
                 ) : (
                   <DeliveryProgress session={deliverySession} scenario={selectedScenario} onPause={handlePauseDelivery} onResume={handleStartDelivery} onReset={handleResetDelivery} onCancel={handleCancelDelivery} />

@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { exec } from 'child_process'
+import { execSync } from 'child_process'
 import path from 'path'
 import fs from 'fs'
-import os from 'os'
 
 // Types
 interface ReportData {
@@ -41,6 +40,9 @@ interface ReportData {
 }
 
 export async function POST(request: NextRequest) {
+  let scriptPath: string | null = null
+  let outputPath: string | null = null
+  
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
@@ -57,8 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams
-    const reportType = searchParams.get('type') || 'performance' // performance, leaderboard, algorithms
-
+    const reportType = searchParams.get('type') || 'performance'
     const period = searchParams.get('period') || 'all'
 
     // Get user stats
@@ -72,8 +73,8 @@ export async function POST(request: NextRequest) {
     const successfulDeliveries = deliveries.filter(d => d.status === 'success').length
     const totalDistance = deliveries.reduce((sum, d) => sum + (d.distance || 0), 0)
     const totalCollisions = deliveries.reduce((sum, d) => sum + (d.collisions || 0), 0)
-    const avgDuration = totalDeliveries > 0 
-      ? deliveries.reduce((sum, d) => sum + (d.duration || 0), 0) / totalDeliveries 
+    const avgDuration = totalDeliveries > 0
+      ? deliveries.reduce((sum, d) => sum + (d.duration || 0), 0) / totalDeliveries
       : 0
 
     // Get algorithms
@@ -116,11 +117,10 @@ export async function POST(request: NextRequest) {
       fs.mkdirSync(outputDir, { recursive: true })
     }
 
-    const outputPath = path.join(outputDir, `report-${user.id}-${Date.now().toISOString()}.pdf`)
+    const timestamp = Date.now()
+    outputPath = path.join(outputDir, `report-${user.id}-${new Date().toISOString()}.pdf`)
+    scriptPath = path.join('/tmp', `report_${timestamp}.py`)
 
-    // Create Python script
-    const scriptPath = path.join('/tmp', `report_${Date.now().getTime()}.py`)
-    
     const pythonScript = `
 import json
 import sys
@@ -293,13 +293,15 @@ print("PDF_GENERATED_SUCCESS")
         status: d.status,
         distance: Math.round(d.distance || 0),
         duration: d.duration || 0,
-        collisions: d.collisions || 0
+        collisions: d.collisions || 0,
+        scenario: d.scenarioName || 'Unknown'
       })),
       algorithms: algorithms.map(a => ({
         name: a.name,
         language: a.language,
         runs: a.runsCount,
-        avgScore: a.avgScore
+        avgScore: a.avgScore,
+        createdAt: new Date(a.createdAt).toISOString()
       }))
     }
 

@@ -13,6 +13,9 @@ export interface User {
   totalDeliveries?: number
   successRate?: number
   totalDistance?: number
+  totalCollisions?: number
+  averageTime?: number
+  bestTime?: number | null
 }
 
 interface AuthContextType {
