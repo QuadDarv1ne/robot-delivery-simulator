@@ -1,39 +1,26 @@
 ---
-name: Documentation Issue
-about: Report issues or suggest improvements for documentation
+name: Запрос документации
+about: Запросить новую документацию или улучшение существующей
 title: '[DOCS] '
 labels: documentation
 assignees: ''
 ---
 
-## 📚 Documentation Issue Type
-- [ ] Missing documentation
-- [ ] Incorrect/outdated information
-- [ ] Typo or formatting issue
-- [ ] Unclear explanation
-- [ ] Request for new documentation
+## 📖 Описание
+Какую документацию нужно добавить или улучшить?
 
-## 📍 Location
-Where is the documentation issue located?
-- File: [e.g. README.md, docs/api.md]
-- Section: [e.g. Installation, Configuration]
-- Line (if applicable): 
+## 📝 Тип запроса
+- [ ] Новая страница документации
+- [ ] Исправление существующей документации
+- [ ] Перевод документации
+- [ ] Улучшение примеров кода
+- [ ] Другое (опишите ниже)
 
-## 🔍 Current State
-What does the current documentation say? (paste relevant section)
+## 🔍 Содержание
+Опишите, что должно быть в документации.
 
-## ✨ Suggested Improvement
-What should the documentation say instead? Or what should be added?
+## 📚 Ссылки
+Есть ли полезные ресурсы или примеры?
 
-## 💻 Code Example (if applicable)
-```typescript
-// Add relevant code examples here
-```
-
-## 🌐 Language
-- [ ] English
-- [ ] Russian
-- [ ] Both
-
-## 📝 Additional Context
-Add any other context about the documentation issue here.
+## 💡 Дополнительная информация
+Любая другая информация, которая поможет понять запрос.
