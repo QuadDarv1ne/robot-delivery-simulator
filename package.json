@@ -54,7 +54,10 @@
     "docker:build": "bash scripts/docker-build.sh",
     "docker:run": "docker-compose up -d",
     "docker:dev": "docker-compose --profile dev up",
-    "docker:prod": "docker-compose --profile production up -d"
+    "docker:prod": "docker-compose --profile production up -d",
+    "clean": "rm -rf node_modules/.cache .next dist",
+    "validate": "npm run lint && npm run type-check && npm run build",
+    "healthcheck": "node scripts/health-check.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
