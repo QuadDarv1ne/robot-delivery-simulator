@@ -55,39 +55,7 @@ async function main() {
 
   console.log('✅ Created teacher user:', teacherUser.email)
 
-  // Create some achievements
-  const achievements = [
-    {
-      name: 'First Delivery',
-      description: 'Complete your first delivery mission',
-      icon: '🚀',
-    },
-    {
-      name: 'Speed Demon',
-      description: 'Complete a mission in under 60 seconds',
-      icon: '⚡',
-    },
-    {
-      name: 'Safety First',
-      description: 'Complete 10 missions without collisions',
-      icon: '🛡️',
-    },
-    {
-      name: 'Marathon Runner',
-      description: 'Travel 10km total distance',
-      icon: '🏃',
-    },
-  ]
-
-  for (const achievement of achievements) {
-    await prisma.achievement.upsert({
-      where: { name: achievement.name },
-      update: {},
-      create: achievement,
-    })
-  }
-
-  console.log('✅ Created achievements')
+  console.log('ℹ️  Skipping achievements - they are created per-user during gameplay')
 
   console.log('🎉 Seeding completed!')
 }
