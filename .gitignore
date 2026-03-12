@@ -89,3 +89,18 @@ uploads/
 
 # Generated files
 *.generated.*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
