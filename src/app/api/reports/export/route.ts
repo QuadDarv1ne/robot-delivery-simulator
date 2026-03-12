@@ -343,10 +343,11 @@ print("PDF_GENERATED_SUCCESS")
     try {
       if (scriptPath && fs.existsSync(scriptPath)) {
         fs.unlinkSync(scriptPath)
+        scriptPath = null
       }
       if (outputPath && fs.existsSync(outputPath)) {
         setTimeout(() => {
-          try { fs.unlinkSync(outputPath) } catch {}
+          try { if (outputPath) fs.unlinkSync(outputPath) } catch {}
         }, 10000)
       }
     } catch {}
