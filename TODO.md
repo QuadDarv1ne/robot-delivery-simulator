@@ -38,6 +38,11 @@
 - Улучшена обработка ошибок в auth-context
 - Тесты для кастомных хуков (useDebounce, useLocalStorage, useOnlineStatus)
 - Тесты для API endpoints клонирования
+- WebSocket команды для симулятора:
+  - getBattery, getLocation, resetPosition
+  - getSensors, setSensors
+  - addObstacle, removeObstacle, clearObstacles
+  - Collision detection с препятствиями
 
 ### 🔄 В работе
 
@@ -45,7 +50,6 @@
 
 #### Улучшения
 - [ ] Добавить автодополнение в редакторах кода
-- [ ] Реализовать недостающие WebSocket команды для симулятора
 - [ ] Оптимизировать размер сборки
 
 ---
