@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { useOnlineStatus } from '@/hooks/use-online-status'
 import {
   Battery,
   MapPin,
@@ -262,6 +263,7 @@ function UnityWebGLPlayer() {
 
 // Main Component
 export default function SimulatorContent({ user, onLogout, onShowProfile, onShowAdmin }: SimulatorContentProps) {
+  const isOnline = useOnlineStatus()
   const [state, setState] = useState<SimulatorState>({
     robotState: null,
     sensorData: null,
@@ -440,6 +442,11 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
           </div>
           
           <div className="flex items-center gap-4">
+            {!isOnline && (
+              <Badge variant="secondary" className="bg-orange-500 hover:bg-orange-600 text-white">
+                <WifiOff className="w-3 h-3 mr-1" />Нет сети
+              </Badge>
+            )}
             <Badge variant={isConnected ? 'default' : 'secondary'} className={isConnected ? 'bg-green-500 hover:bg-green-600' : ''}>
               {isConnected ? <><Wifi className="w-3 h-3 mr-1" />Подключено</> : <><WifiOff className="w-3 h-3 mr-1" />Отключено</>}
             </Badge>
