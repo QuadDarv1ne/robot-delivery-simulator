@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import { logger } from './logger'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -15,11 +16,9 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
 export async function connectDatabase(): Promise<void> {
   try {
     await db.$connect()
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Database connected successfully')
-    }
+    logger.info('Database connected successfully', 'DB')
   } catch (error) {
-    console.error('Database connection failed:', error)
+    logger.error('Database connection failed', 'DB', error)
     throw error
   }
 }
@@ -28,6 +27,6 @@ export async function disconnectDatabase(): Promise<void> {
   try {
     await db.$disconnect()
   } catch (error) {
-    console.error('Database disconnection failed:', error)
+    logger.error('Database disconnection failed', 'DB', error)
   }
 }
