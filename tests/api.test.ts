@@ -201,12 +201,117 @@ describe('API Endpoints', () => {
       const { GET } = await import('@/app/api/scenarios/search/route')
       const response = await GET(mockReq)
       const data = await response.json()
-      
+
       console.log('Response status:', response.status)
       console.log('Response data:', data)
-      
+
       expect([200, 400]).toContain(response.status)
       expect(data).toBeDefined()
+    })
+  })
+
+  describe('Algorithm Clone API', () => {
+    it('should clone an algorithm successfully', async () => {
+      const { db } = await import('@/lib/db')
+      const originalAlgorithm = {
+        id: 'clx1234567890abcdef',
+        name: 'Test Algorithm',
+        description: 'Test description',
+        language: 'python',
+        code: 'print("hello")',
+        isPublic: true,
+        userId: 'user1'
+      }
+
+      ;(db.algorithm.findUnique as jest.Mock).mockResolvedValue(originalAlgorithm)
+      ;(db.algorithm.create as jest.Mock).mockResolvedValue({
+        ...originalAlgorithm,
+        id: 'clx9876543210fedcba',
+        name: 'Test Algorithm (Copy)',
+        isPublic: false
+      })
+
+      const mockReq = {
+        json: async () => ({ id: 'clx1234567890abcdef' }),
+      } as any
+
+      const { POST } = await import('@/app/api/algorithms/clone/route')
+      const response = await POST(mockReq)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.algorithm.name).toContain('(Copy)')
+      expect(db.algorithm.create).toHaveBeenCalled()
+    })
+
+    it('should return 404 when algorithm not found', async () => {
+      const { db } = await import('@/lib/db')
+      ;(db.algorithm.findUnique as jest.Mock).mockResolvedValue(null)
+
+      const mockReq = {
+        json: async () => ({ id: 'clx1234567890abcdef' }),
+      } as any
+
+      const { POST } = await import('@/app/api/algorithms/clone/route')
+      const response = await POST(mockReq)
+
+      expect(response.status).toBe(404)
+    })
+  })
+
+  describe('Scenario Clone API', () => {
+    it('should clone a scenario successfully', async () => {
+      const { db } = await import('@/lib/db')
+      const originalScenario = {
+        id: 'clx1234567890abcdef',
+        name: 'Test Scenario',
+        description: 'Test description',
+        difficulty: 'medium',
+        distance: 1000,
+        timeLimit: 300,
+        weather: 'sunny',
+        traffic: 'low',
+        startPoint: '{}',
+        endPoint: '{}',
+        waypoints: '[]',
+        obstacles: '[]',
+        isPublic: true,
+        createdById: 'user1'
+      }
+
+      ;(db.deliveryScenario.findUnique as jest.Mock).mockResolvedValue(originalScenario)
+      ;(db.deliveryScenario.create as jest.Mock).mockResolvedValue({
+        ...originalScenario,
+        id: 'clx9876543210fedcba',
+        name: 'Test Scenario (Copy)',
+        isPublic: false
+      })
+
+      const mockReq = {
+        json: async () => ({ id: 'clx1234567890abcdef' }),
+      } as any
+
+      const { POST } = await import('@/app/api/scenarios/clone/route')
+      const response = await POST(mockReq)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.scenario.name).toContain('(Copy)')
+      expect(db.deliveryScenario.create).toHaveBeenCalled()
+    })
+
+    it('should return 404 when scenario not found', async () => {
+      const { db } = await import('@/lib/db')
+      ;(db.deliveryScenario.findUnique as jest.Mock).mockResolvedValue(null)
+
+      const mockReq = {
+        json: async () => ({ id: 'clx1234567890abcdef' }),
+      } as any
+
+      const { POST } = await import('@/app/api/scenarios/clone/route')
+      const response = await POST(mockReq)
+
+      expect(response.status).toBe(404)
     })
   })
 })
