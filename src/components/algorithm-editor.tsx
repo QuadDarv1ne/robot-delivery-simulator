@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -250,7 +251,10 @@ export function AlgorithmEditor() {
   }, [])
 
   const handleSave = async () => {
-    if (!name.trim()) return
+    if (!name.trim()) {
+      toast.error('Введите название алгоритма')
+      return
+    }
 
     setIsSaving(true)
     try {
@@ -275,9 +279,14 @@ export function AlgorithmEditor() {
       if (response.ok) {
         await fetchAlgorithms()
         setShowSaveDialog(false)
+        toast.success(selectedAlgorithm ? 'Алгоритм обновлён' : 'Алгоритм создан')
+      } else {
+        const data = await response.json()
+        toast.error(data.error || 'Ошибка сохранения')
       }
     } catch (error) {
       console.error('Failed to save algorithm:', error)
+      toast.error('Ошибка сохранения алгоритма')
     } finally {
       setIsSaving(false)
     }
@@ -297,9 +306,14 @@ export function AlgorithmEditor() {
         if (selectedAlgorithm?.id === algorithm.id) {
           handleNewAlgorithm()
         }
+        toast.success('Алгоритм удалён')
+      } else {
+        const data = await response.json()
+        toast.error(data.error || 'Ошибка удаления')
       }
     } catch (error) {
       console.error('Failed to delete algorithm:', error)
+      toast.error('Ошибка удаления алгоритма')
     }
   }
 
@@ -322,9 +336,13 @@ export function AlgorithmEditor() {
         setRunResult(data.result)
         setShowResultDialog(true)
         await fetchAlgorithms()
+      } else {
+        const data = await response.json()
+        toast.error(data.error || 'Ошибка запуска')
       }
     } catch (error) {
       console.error('Failed to run algorithm:', error)
+      toast.error('Ошибка запуска алгоритма')
       setRunResult({
         success: false,
         distanceTraveled: 0,
@@ -384,12 +402,15 @@ export function AlgorithmEditor() {
       if (response.ok) {
         const data = await response.json()
         await fetchAlgorithms()
-        // Select the cloned algorithm
-        const cloned = data.algorithm
-        handleSelectAlgorithm(cloned)
+        handleSelectAlgorithm(data.algorithm)
+        toast.success('Алгоритм склонирован')
+      } else {
+        const data = await response.json()
+        toast.error(data.error || 'Ошибка клонирования')
       }
     } catch (error) {
       console.error('Failed to clone algorithm:', error)
+      toast.error('Ошибка клонирования алгоритма')
     } finally {
       setIsCloning(false)
     }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { toast } from 'sonner'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -181,14 +182,17 @@ export function ScenarioEditor() {
   }
 
   const handleSave = async () => {
-    if (!formData.name.trim()) return
+    if (!formData.name.trim()) {
+      toast.error('Введите название сценария')
+      return
+    }
 
     setIsSaving(true)
     try {
       const url = '/api/scenarios'
       const method = isNewScenario ? 'POST' : 'PUT'
-      const body = isNewScenario 
-        ? formData 
+      const body = isNewScenario
+        ? formData
         : { id: selectedScenario?.id, ...formData }
 
       const response = await fetch(url, {
@@ -200,9 +204,14 @@ export function ScenarioEditor() {
       if (response.ok) {
         await fetchScenarios()
         setShowEditDialog(false)
+        toast.success(isNewScenario ? 'Сценарий создан' : 'Сценарий обновлён')
+      } else {
+        const data = await response.json()
+        toast.error(data.error || 'Ошибка сохранения')
       }
     } catch (error) {
       console.error('Failed to save scenario:', error)
+      toast.error('Ошибка сохранения сценария')
     } finally {
       setIsSaving(false)
     }
@@ -218,9 +227,14 @@ export function ScenarioEditor() {
 
       if (response.ok) {
         await fetchScenarios()
+        toast.success('Сценарий удалён')
+      } else {
+        const data = await response.json()
+        toast.error(data.error || 'Ошибка удаления')
       }
     } catch (error) {
       console.error('Failed to delete scenario:', error)
+      toast.error('Ошибка удаления сценария')
     }
   }
 
@@ -236,11 +250,15 @@ export function ScenarioEditor() {
       if (response.ok) {
         const data = await response.json()
         await fetchScenarios()
-        // Edit the cloned scenario
         handleEditScenario(data.scenario)
+        toast.success('Сценарий склонирован')
+      } else {
+        const data = await response.json()
+        toast.error(data.error || 'Ошибка клонирования')
       }
     } catch (error) {
       console.error('Failed to clone scenario:', error)
+      toast.error('Ошибка клонирования сценария')
     } finally {
       setIsCloning(false)
     }
