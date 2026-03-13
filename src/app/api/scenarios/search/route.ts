@@ -8,10 +8,12 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get('q')
     const difficulty = searchParams.get('difficulty')
     const weather = searchParams.get('weather')
+    const sortBy = searchParams.get('sortBy')
+    const sortOrder = searchParams.get('sortOrder')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
 
-    const validation = scenarioSearchSchema.safeParse({ q: query, difficulty, weather, page, limit })
+    const validation = scenarioSearchSchema.safeParse({ q: query, difficulty, weather, page, limit, sortBy, sortOrder })
 
     if (!validation.success) {
       const errors = validation.error.issues.map(e => ({
@@ -24,7 +26,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const { q, difficulty: diff, weather: w, page: validatedPage, limit: validatedLimit } = validation.data
+    const { q, difficulty: diff, weather: w, page: validatedPage, limit: validatedLimit, sortBy: sort, sortOrder: order } = validation.data
 
     const where: any = {}
 
@@ -54,7 +56,7 @@ export async function GET(request: NextRequest) {
             }
           }
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { [sort]: order },
         skip: (validatedPage - 1) * validatedLimit,
         take: validatedLimit
       }),

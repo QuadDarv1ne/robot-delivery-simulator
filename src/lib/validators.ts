@@ -32,6 +32,8 @@ export const algorithmCloneSchema = z.object({
 export const algorithmSearchSchema = z.object({
   q: z.string().optional(),
   language: z.enum(['python', 'javascript', 'c#']).optional(),
+  sortBy: z.enum(['createdAt', 'updatedAt', 'name', 'runsCount']).default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(10)
 })
@@ -87,6 +89,8 @@ export const scenarioSearchSchema = z.object({
   q: z.string().optional(),
   difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
   weather: z.enum(['sunny', 'rainy', 'snowy']).optional(),
+  sortBy: z.enum(['createdAt', 'updatedAt', 'name', 'playsCount']).default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(10)
 })
