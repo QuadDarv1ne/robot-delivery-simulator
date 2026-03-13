@@ -10,6 +10,14 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
+import { Light as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { python } from 'react-syntax-highlighter/dist/esm/languages/prism'
+import { javascript } from 'react-syntax-highlighter/dist/esm/languages/prism'
+
+SyntaxHighlighter.registerLanguage('python', python)
+SyntaxHighlighter.registerLanguage('javascript', javascript)
+
 import {
   Select,
   SelectContent,
@@ -658,15 +666,35 @@ export function AlgorithmEditor() {
               </div>
             </div>
 
-            {/* Code area */}
+            {/* Code area with syntax highlighting */}
             <ScrollArea className="flex-1">
-              <Textarea
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                className="min-h-full font-mono text-sm resize-none border-0 rounded-none focus-visible:ring-0 p-3 leading-[1.5rem] bg-transparent"
-                placeholder="Введите код алгоритма..."
-                spellCheck={false}
-              />
+              <div className="relative min-h-full">
+                <SyntaxHighlighter
+                  language={language}
+                  style={oneDark}
+                  customStyle={{
+                    margin: 0,
+                    padding: '12px',
+                    background: 'transparent',
+                    fontSize: '14px',
+                    lineHeight: '1.5rem',
+                    minHeight: '100%'
+                  }}
+                  showLineNumbers={false}
+                  wrapLines={false}
+                  wrapLongLines={false}
+                >
+                  {code}
+                </SyntaxHighlighter>
+                <textarea
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  className="absolute inset-0 w-full h-full opacity-0 resize-none p-3 font-mono text-sm leading-[1.5rem] bg-transparent caret-primary"
+                  placeholder="Введите код алгоритма..."
+                  spellCheck={false}
+                  style={{ tabSize: 4 }}
+                />
+              </div>
               <ScrollBar orientation="horizontal" />
             </ScrollArea>
           </div>
