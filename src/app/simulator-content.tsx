@@ -12,14 +12,14 @@ import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { 
-  Battery, 
-  MapPin, 
-  Radar, 
-  Wifi, 
-  WifiOff, 
-  Play, 
-  Square, 
+import {
+  Battery,
+  MapPin,
+  Radar,
+  Wifi,
+  WifiOff,
+  Play,
+  Square,
   RotateCcw,
   Activity,
   Navigation,
@@ -37,7 +37,10 @@ import {
   BarChart3,
   Layers,
   User,
-  Trophy
+  Trophy,
+  Forward,
+  RotateCw,
+  RotateCcw as RotateLeft
 } from 'lucide-react'
 import { 
   DeliveryScenario, 
@@ -357,6 +360,19 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
       sendCommand('move', { velocity: { x: 0, y: 0, z: 0.5 } })
     }
   }
+
+  const handleManualControl = useCallback((command: 'forward' | 'backward' | 'left' | 'right' | 'rotate-left' | 'rotate-right' | 'stop') => {
+    const commands = {
+      'forward': { velocity: { x: 0, y: 0, z: 0.5 } },
+      'backward': { velocity: { x: 0, y: 0, z: -0.3 } },
+      'left': { velocity: { x: -0.3, y: 0, z: 0 } },
+      'right': { velocity: { x: 0.3, y: 0, z: 0 } },
+      'rotate-left': { rotation: { y: 5 } },
+      'rotate-right': { rotation: { y: -5 } },
+      'stop': { velocity: { x: 0, y: 0, z: 0 } }
+    }
+    sendCommand('move', commands[command])
+  }, [sendCommand])
   
   const handlePauseDelivery = () => {
     if (deliverySession) {
@@ -499,6 +515,45 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
                         </div>
                       </div>
                     )}
+                    
+                    {/* Manual Control Panel */}
+                    <div className="mt-4">
+                      <div className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <Settings className="w-4 h-4" />
+                        Ручное управление
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto">
+                        <div />
+                        <Button variant="outline" size="icon" className="h-12 w-12" onClick={() => handleManualControl('forward')}>
+                          <ArrowUp className="w-5 h-5" />
+                        </Button>
+                        <div />
+                        <Button variant="outline" size="icon" className="h-12 w-12" onClick={() => handleManualControl('left')}>
+                          <ArrowLeft className="w-5 h-5" />
+                        </Button>
+                        <Button variant="outline" size="icon" className="h-12 w-12" onClick={() => handleManualControl('stop')}>
+                          <Square className="w-5 h-5" />
+                        </Button>
+                        <Button variant="outline" size="icon" className="h-12 w-12" onClick={() => handleManualControl('right')}>
+                          <ArrowRight className="w-5 h-5" />
+                        </Button>
+                        <div />
+                        <Button variant="outline" size="icon" className="h-12 w-12" onClick={() => handleManualControl('backward')}>
+                          <ArrowDown className="w-5 h-5" />
+                        </Button>
+                        <div />
+                      </div>
+                      <div className="flex gap-2 mt-3 justify-center">
+                        <Button variant="outline" size="sm" onClick={() => handleManualControl('rotate-left')}>
+                          <RotateLeft className="w-4 h-4 mr-1" />
+                          Поворот ←
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleManualControl('rotate-right')}>
+                          Поворот →
+                          <RotateCw className="w-4 h-4 ml-1" />
+                        </Button>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
