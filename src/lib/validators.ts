@@ -122,3 +122,13 @@ export const profileUpdateSchema = z.object({
   group: z.string().optional().nullable(),
   avatar: z.string().url().optional().nullable()
 })
+
+export const adminUserUpdateSchema = z.object({
+  userId: z.string().cuid('Невалидный ID пользователя'),
+  data: z.object({
+    name: z.string().min(2).optional(),
+    role: z.enum(['student', 'teacher', 'admin']).optional(),
+    group: z.string().optional().nullable(),
+    avatar: z.string().url().optional().nullable()
+  })
+})

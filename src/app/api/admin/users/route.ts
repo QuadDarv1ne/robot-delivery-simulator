@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { cookies } from 'next/headers'
+import { adminUserUpdateSchema } from '@/lib/validators'
 
 // Check admin access
 async function checkAdmin() {
@@ -117,35 +118,25 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const { userId, data } = await request.json()
+    const body = await request.json()
+    const validation = adminUserUpdateSchema.safeParse(body)
 
-    if (!userId) {
+    if (!validation.success) {
+      const errors = validation.error.issues.map(e => ({
+        field: e.path.join('.'),
+        message: e.message
+      }))
       return NextResponse.json(
-        { error: 'ID пользователя обязателен' },
+        { error: 'Ошибка валидации', details: errors },
         { status: 400 }
       )
     }
 
-    // Only allow updating certain fields
-    const allowedFields = ['name', 'role', 'group', 'avatar']
-    const updateData: Record<string, unknown> = {}
-    
-    for (const field of allowedFields) {
-      if (data[field] !== undefined) {
-        updateData[field] = data[field]
-      }
-    }
-
-    if (Object.keys(updateData).length === 0) {
-      return NextResponse.json(
-        { error: 'Нет данных для обновления' },
-        { status: 400 }
-      )
-    }
+    const { userId, data } = validation.data
 
     const updatedUser = await db.user.update({
       where: { id: userId },
-      data: updateData,
+      data: data,
       select: {
         id: true,
         email: true,
