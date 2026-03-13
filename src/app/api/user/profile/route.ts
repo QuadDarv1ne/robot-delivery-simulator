@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { cookies } from 'next/headers'
+import { profileUpdateSchema } from '@/lib/validators'
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -30,36 +31,21 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const data = await request.json()
+    const body = await request.json()
+    const validation = profileUpdateSchema.safeParse(body)
 
-    const allowedFields = ['name', 'group', 'avatar']
-    const updateData: Record<string, unknown> = {}
-
-    for (const field of allowedFields) {
-      if (data[field] !== undefined) {
-        if (field === 'name' && typeof data[field] === 'string') {
-          const trimmed = data[field].trim()
-          if (trimmed.length < 2) {
-            return NextResponse.json(
-              { error: 'Имя должно содержать минимум 2 символа' },
-              { status: 400 }
-            )
-          }
-          updateData[field] = trimmed
-        } else if (field === 'group') {
-          updateData[field] = data[field] || null
-        } else if (field === 'avatar') {
-          updateData[field] = data[field]
-        }
-      }
-    }
-
-    if (Object.keys(updateData).length === 0) {
+    if (!validation.success) {
+      const errors = validation.error.issues.map(e => ({
+        field: e.path.join('.'),
+        message: e.message
+      }))
       return NextResponse.json(
-        { error: 'Нет данных для обновления' },
+        { error: 'Ошибка валидации', details: errors },
         { status: 400 }
       )
     }
+
+    const updateData = validation.data
 
     const updatedUser = await db.user.update({
       where: { id: session.userId },

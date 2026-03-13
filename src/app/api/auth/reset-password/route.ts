@@ -1,24 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
+import { resetPasswordSchema } from '@/lib/validators'
 
 export async function POST(request: NextRequest) {
   try {
-    const { token, password } = await request.json()
+    const body = await request.json()
+    const validation = resetPasswordSchema.safeParse(body)
 
-    if (!token || !password) {
+    if (!validation.success) {
+      const errors = validation.error.issues.map(e => ({
+        field: e.path.join('.'),
+        message: e.message
+      }))
       return NextResponse.json(
-        { error: 'Токен и пароль обязательны' },
+        { error: 'Ошибка валидации', details: errors },
         { status: 400 }
       )
     }
 
-    if (password.length < 6) {
-      return NextResponse.json(
-        { error: 'Пароль должен быть минимум 6 символов' },
-        { status: 400 }
-      )
-    }
+    const { token, password } = validation.data
 
     // Find reset token
     const resetToken = await db.passwordResetToken.findUnique({

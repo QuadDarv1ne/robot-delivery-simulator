@@ -116,3 +116,9 @@ export const resetPasswordSchema = z.object({
   token: z.string(),
   password: z.string().min(6, 'Пароль должен содержать минимум 6 символов')
 })
+
+export const profileUpdateSchema = z.object({
+  name: z.string().min(2, 'Имя должно содержать минимум 2 символа').optional(),
+  group: z.string().optional().nullable(),
+  avatar: z.string().url().optional().nullable()
+})

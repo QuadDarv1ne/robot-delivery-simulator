@@ -1,17 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { randomUUID } from 'crypto'
+import { forgotPasswordSchema } from '@/lib/validators'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json()
+    const body = await request.json()
+    const validation = forgotPasswordSchema.safeParse(body)
 
-    if (!email) {
+    if (!validation.success) {
+      const errors = validation.error.issues.map(e => ({
+        field: e.path.join('.'),
+        message: e.message
+      }))
       return NextResponse.json(
-        { error: 'Email обязателен' },
+        { error: 'Ошибка валидации', details: errors },
         { status: 400 }
       )
     }
+
+    const { email } = validation.data
 
     // Check if user exists
     const user = await db.user.findUnique({
