@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { db } from "./db"
 import { randomBytes, randomUUID } from "crypto"
 import type { DefaultSession } from "next-auth"
+import bcrypt from 'bcryptjs'
 
 // Extend NextAuth session type
 declare module "next-auth" {
@@ -13,7 +14,7 @@ declare module "next-auth" {
       group?: string | null
     } & DefaultSession["user"]
   }
-  
+
   interface User {
     id: string
     role: string
@@ -22,14 +23,12 @@ declare module "next-auth" {
   }
 }
 
-// Simple password hashing (in production use bcrypt)
-function hashPassword(password: string): string {
-  // Using a simple hash for demo - in production use bcrypt
-  return Buffer.from(password).toString('base64')
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 10)
 }
 
-function verifyPassword(password: string, hash: string): boolean {
-  return hashPassword(password) === hash
+async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(password, hash)
 }
 
 export const authOptions: NextAuthOptions = {
@@ -50,7 +49,6 @@ export const authOptions: NextAuthOptions = {
         const action = credentials.action || 'login'
 
         if (action === 'register') {
-          // Register new user
           const existingUser = await db.user.findUnique({
             where: { email: credentials.email }
           })
@@ -59,11 +57,13 @@ export const authOptions: NextAuthOptions = {
             throw new Error("Пользователь уже существует")
           }
 
+          const hashedPassword = await hashPassword(credentials.password)
+
           const newUser = await db.user.create({
             data: {
               email: credentials.email,
               name: credentials.name || credentials.email.split('@')[0],
-              password: hashPassword(credentials.password),
+              password: hashedPassword,
               role: 'student'
             }
           })
@@ -76,7 +76,6 @@ export const authOptions: NextAuthOptions = {
           }
         }
 
-        // Login existing user
         const user = await db.user.findUnique({
           where: { email: credentials.email }
         })
@@ -85,11 +84,12 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        if (!verifyPassword(credentials.password, user.password)) {
+        const isValid = await verifyPassword(credentials.password, user.password)
+
+        if (!isValid) {
           return null
         }
 
-        // Update last active
         await db.user.update({
           where: { id: user.id },
           data: { lastActiveAt: new Date() }
