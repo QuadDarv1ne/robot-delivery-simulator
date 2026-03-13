@@ -3,15 +3,19 @@ import { db } from '@/lib/db'
 
 export async function GET() {
   const startTime = Date.now()
-  
+
   try {
-    // Check database connection
     let dbStatus = 'disconnected'
+    let dbLatency: number | null = null
+
     try {
+      const dbStart = Date.now()
       await db.$queryRaw`SELECT 1`
       dbStatus = 'connected'
-    } catch {
+      dbLatency = Date.now() - dbStart
+    } catch (error) {
       dbStatus = 'error'
+      console.error('Database health check failed:', error)
     }
 
     const health = {
@@ -23,9 +27,13 @@ export async function GET() {
       memory: {
         used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
         total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+        rss: Math.round(process.memoryUsage().rss / 1024 / 1024),
       },
       services: {
-        database: dbStatus,
+        database: {
+          status: dbStatus,
+          latency: dbLatency,
+        },
       },
       responseTime: Date.now() - startTime,
     }
