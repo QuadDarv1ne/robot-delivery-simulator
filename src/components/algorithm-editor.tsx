@@ -83,6 +83,30 @@ interface RunResult {
   deliveryResultId?: string
 }
 
+interface DeliveryHistory {
+  id: string
+  status: string
+  distance: number
+  batteryUsed: number
+  collisions: number
+  duration: number
+  efficiencyScore: number | null
+  safetyScore: number | null
+  speedScore: number | null
+  startTime: string
+  endTime: string
+  algorithm?: {
+    id: string
+    name: string
+    language: string
+  } | null
+  scenario?: {
+    id: string
+    name: string
+    difficulty: string
+  } | null
+}
+
 const DEFAULT_PYTHON_CODE = `# Алгоритм управления роботом-доставщиком
 # Доступные функции:
 # - get_gps() -> {lat, lon, altitude}
@@ -198,6 +222,8 @@ export function AlgorithmEditor() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(0)
   const [totalItems, setTotalItems] = useState(0)
+  const [history, setHistory] = useState<DeliveryHistory[]>([])
+  const [showHistoryDialog, setShowHistoryDialog] = useState(false)
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null)
 
   const fetchAlgorithms = useCallback(async (searchParams?: { query?: string; language?: string; page?: number }) => {
@@ -456,6 +482,20 @@ export function AlgorithmEditor() {
     fetchAlgorithms()
   }
 
+  const handleFetchHistory = async () => {
+    try {
+      const response = await fetch('/api/algorithms/history?limit=50')
+      if (response.ok) {
+        const data = await response.json()
+        setHistory(data.deliveries || [])
+        setShowHistoryDialog(true)
+      }
+    } catch (error) {
+      console.error('Failed to fetch history:', error)
+      toast.error('Ошибка загрузки истории')
+    }
+  }
+
   const lineNumbers = code.split('\n').map((_, i) => i + 1)
 
   return (
@@ -625,6 +665,9 @@ export function AlgorithmEditor() {
             </div>
 
             <div className="flex items-center gap-2 ml-auto flex-wrap justify-end">
+              <Button variant="outline" size="sm" className="h-9" onClick={handleFetchHistory}>
+                <Clock className="w-4 h-4 mr-1.5" />История
+              </Button>
               <label>
                 <input
                   type="file"
@@ -846,6 +889,85 @@ export function AlgorithmEditor() {
 
           <DialogFooter>
             <Button onClick={() => setShowResultDialog(false)} className="min-w-[100px]">
+              Закрыть
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* History Dialog */}
+      <Dialog open={showHistoryDialog} onOpenChange={setShowHistoryDialog}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5" />
+              История запусков
+            </DialogTitle>
+            <DialogDescription>
+              Последние запуски алгоритмов
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="h-[400px]">
+            {history.length === 0 ? (
+              <div className="text-center text-muted-foreground py-8">
+                <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>История пуста</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {history.map((run) => (
+                  <Card key={run.id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-3 h-3 rounded-full ${
+                            run.status === 'success' ? 'bg-green-500' :
+                            run.status === 'failed' ? 'bg-red-500' : 'bg-yellow-500'
+                          }`} />
+                          <div>
+                            <div className="font-medium">
+                              {run.algorithm?.name || 'Custom Algorithm'}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {run.scenario?.name || 'Custom Scenario'} • 
+                              {new Date(run.startTime).toLocaleString('ru-RU')}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm">
+                          <div className="text-right">
+                            <div className="text-muted-foreground text-xs">Расстояние</div>
+                            <div className="font-mono">{run.distance} м</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-muted-foreground text-xs">Время</div>
+                            <div className="font-mono">{Math.floor(run.duration / 60)}:{String(run.duration % 60).padStart(2, '0')}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-muted-foreground text-xs">Эффективность</div>
+                            <div className={`font-mono ${
+                              (run.efficiencyScore || 0) >= 80 ? 'text-green-500' :
+                              (run.efficiencyScore || 0) >= 50 ? 'text-yellow-500' : 'text-red-500'
+                            }`}>{run.efficiencyScore?.toFixed(0) || 'N/A'}%</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-muted-foreground text-xs">Столкновения</div>
+                            <div className={`font-mono ${run.collisions > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                              {run.collisions}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+
+          <DialogFooter>
+            <Button onClick={() => setShowHistoryDialog(false)}>
               Закрыть
             </Button>
           </DialogFooter>
