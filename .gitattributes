@@ -1,6 +1,9 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
+# Force LF line endings for all source files (cross-platform consistency)
+* text eol=lf
+
 # Source code
 *.ts text eol=lf
 *.tsx text eol=lf
@@ -18,6 +21,8 @@
 *.toml text eol=lf
 *.xml text eol=lf
 .env.example text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
 
 # Shell scripts
 *.sh text eol=lf
@@ -52,3 +57,8 @@ docker-compose*.yml text eol=lf
 *.db binary
 *.sqlite binary
 *.sqlite3 binary
+
+# Lock files
+*.lock text eol=lf
+package-lock.json text eol=lf
+bun.lock text eol=lf

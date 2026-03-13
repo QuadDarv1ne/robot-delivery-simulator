@@ -81,12 +81,16 @@ export function Leaderboard({ currentUserId }: LeaderboardProps) {
       const params = new URLSearchParams()
       params.set('period', period)
       if (group) params.set('group', group)
+
+      const url = `${window.location.origin}/api/leaderboard?${params}`
+      const response = await fetch(url)
       
-      const response = await fetch(`/api/leaderboard?${params}`)
-      if (response.ok) {
-        const result = await response.json()
-        setData(result)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
+      
+      const result = await response.json()
+      setData(result)
     } catch (error) {
       console.error('Failed to fetch leaderboard:', error)
     } finally {

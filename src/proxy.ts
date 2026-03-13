@@ -17,7 +17,7 @@ const STRICT_PATHS = [
   '/api/auth/reset-password',
 ]
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   if (!pathname.startsWith('/api') || pathname === '/api/health') {

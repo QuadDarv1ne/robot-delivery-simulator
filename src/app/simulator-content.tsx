@@ -268,38 +268,73 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
   const [activeView, setActiveView] = useState<'simulator' | 'map' | 'lidar3d' | 'leaderboard' | 'algorithms'>('simulator')
   
   const socketRef = useRef<Socket | null>(null)
-  
+
+  // Stable event handlers (defined outside useEffect to avoid re-subscriptions)
+  const handleSensorData = useCallback((data: { sensorData: SensorData; robotState: RobotState }) => {
+    setState(prev => ({ ...prev, sensorData: data.sensorData, robotState: data.robotState }))
+  }, [])
+
+  const handleRobotState = useCallback((robotState: RobotState) => {
+    setState(prev => ({ ...prev, robotState }))
+  }, [])
+
   // WebSocket connection
   useEffect(() => {
-    const socket = io('/?XTransformPort=3003', { path: '/', transports: ['websocket', 'polling'] })
+    const socket = io('/?XTransformPort=3003', {
+      path: '/',
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 10000
+    })
     socketRef.current = socket
 
-    socket.on('connect', () => {
+    const handleConnect = () => {
+      console.log('[WebSocket] Connected successfully')
       socket.emit('register', { type: 'viewer' })
       setState(prev => ({ ...prev, isConnected: true }))
-    })
+    }
 
-    socket.on('disconnect', () => setState(prev => ({ ...prev, isConnected: false })))
+    const handleDisconnect = (reason: string) => {
+      console.warn(`[WebSocket] Disconnected: ${reason}`)
+      setState(prev => ({ ...prev, isConnected: false }))
+    }
 
-    socket.on('sensor-data', (data: { sensorData: SensorData; robotState: RobotState }) => {
-      setState(prev => ({ ...prev, sensorData: data.sensorData, robotState: data.robotState }))
-    })
+    const handleConnectError = (error: Error) => {
+      console.error('[WebSocket] Connection error:', error.message)
+      setState(prev => ({ ...prev, isConnected: false }))
+    }
 
-    socket.on('robot-state', (robotState: RobotState) => {
-      setState(prev => ({ ...prev, robotState }))
-    })
+    const handleError = (error: Error) => {
+      console.error('[WebSocket] Socket error:', error)
+    }
+
+    socket.on('connect', handleConnect)
+    socket.on('disconnect', handleDisconnect)
+    socket.on('connect_error', handleConnectError)
+    socket.on('error', handleError)
+    socket.on('sensor-data', handleSensorData)
+    socket.on('robot-state', handleRobotState)
 
     return () => {
+      console.log('[WebSocket] Cleaning up connection')
+      socket.off('connect', handleConnect)
+      socket.off('disconnect', handleDisconnect)
+      socket.off('connect_error', handleConnectError)
+      socket.off('error', handleError)
+      socket.off('sensor-data', handleSensorData)
+      socket.off('robot-state', handleRobotState)
       socket.disconnect()
       socketRef.current = null
     }
-  }, [])
-  
+  }, [handleSensorData, handleRobotState])
+
   const sendCommand = useCallback((type: string, data?: Record<string, unknown>) => {
-    if (socketRef.current && state.isConnected) {
+    if (socketRef.current?.connected) {
       socketRef.current.emit('control', { type, data: data || {} })
     }
-  }, [state.isConnected])
+  }, [])
   
   const handleSelectScenario = (scenario: DeliveryScenario) => {
     setSelectedScenario(scenario)
@@ -352,12 +387,19 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
       return () => clearInterval(interval)
     }
   }, [deliverySession?.status, selectedScenario])
-  
+
+  // Memoized computed values
   const { robotState, sensorData, isConnected } = state
-  const lidarPoints = sensorData?.lidar ? 
-    sensorData.lidar.distances.map((d, i) => ({ distance: d, angle: sensorData.lidar.angles[i] })) : undefined
   
-  const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  const lidarPoints = sensorData?.lidar ?
+    sensorData.lidar.distances.map((d, i) => ({
+      distance: d,
+      angle: sensorData.lidar.angles[i]
+    })) : undefined
+
+  const getInitials = useCallback((name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  }, [])
   
   return (
     <div className="min-h-screen bg-background">

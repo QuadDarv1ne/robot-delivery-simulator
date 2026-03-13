@@ -28,6 +28,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# Mini-services compiled files
+mini-services/**/*.js
+
 # Local env files
 .env
 .env*.local
