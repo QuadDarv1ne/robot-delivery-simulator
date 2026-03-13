@@ -8,13 +8,19 @@ export async function POST() {
     const token = cookieStore.get('session_token')?.value
 
     if (token) {
-      // Delete session from database
       await db.userSession.deleteMany({
         where: { token }
       })
+
+      await db.userSession.deleteMany({
+        where: {
+          expiresAt: {
+            lt: new Date()
+          }
+        }
+      })
     }
 
-    // Clear cookie
     cookieStore.delete('session_token')
 
     return NextResponse.json({ success: true })
