@@ -10,13 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
-import { Light as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { python } from 'react-syntax-highlighter/dist/esm/languages/prism'
-import { javascript } from 'react-syntax-highlighter/dist/esm/languages/prism'
-
-SyntaxHighlighter.registerLanguage('python', python)
-SyntaxHighlighter.registerLanguage('javascript', javascript)
+import Editor from '@monaco-editor/react'
 
 import {
   Select,
@@ -496,8 +490,6 @@ export function AlgorithmEditor() {
     }
   }
 
-  const lineNumbers = code.split('\n').map((_, i) => i + 1)
-
   return (
     <div className="flex h-full gap-4 p-4">
       {/* Sidebar */}
@@ -699,47 +691,31 @@ export function AlgorithmEditor() {
 
         {/* Editor */}
         <div className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 flex overflow-hidden">
-            {/* Line numbers */}
-            <div className="bg-muted py-3 px-2 text-right text-xs text-muted-foreground font-mono select-none border-r shrink-0 overflow-hidden">
-              <div className="space-y-[1.5rem]">
-                {lineNumbers.map((num) => (
-                  <div key={num}>{num}</div>
-                ))}
-              </div>
-            </div>
-
-            {/* Code area with syntax highlighting */}
-            <ScrollArea className="flex-1">
-              <div className="relative min-h-full">
-                <SyntaxHighlighter
-                  language={language}
-                  style={oneDark}
-                  customStyle={{
-                    margin: 0,
-                    padding: '12px',
-                    background: 'transparent',
-                    fontSize: '14px',
-                    lineHeight: '1.5rem',
-                    minHeight: '100%'
-                  }}
-                  showLineNumbers={false}
-                  wrapLines={false}
-                  wrapLongLines={false}
-                >
-                  {code}
-                </SyntaxHighlighter>
-                <textarea
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  className="absolute inset-0 w-full h-full opacity-0 resize-none p-3 font-mono text-sm leading-[1.5rem] bg-transparent caret-primary"
-                  placeholder="Введите код алгоритма..."
-                  spellCheck={false}
-                  style={{ tabSize: 4 }}
-                />
-              </div>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
+          {/* Monaco Editor */}
+          <div className="flex-1 overflow-hidden">
+            <Editor
+              height="100%"
+              language={language === 'python' ? 'python' : 'javascript'}
+              value={code}
+              onChange={(value) => setCode(value || '')}
+              theme="vs-dark"
+              options={{
+                minimap: { enabled: false },
+                fontSize: 14,
+                lineNumbers: 'on',
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                tabSize: 4,
+                wordWrap: 'off',
+                formatOnPaste: true,
+                formatOnType: true,
+                autoIndent: 'full',
+                suggestOnTriggerCharacters: true,
+                quickSuggestions: true,
+                folding: true,
+                lineNumbersMinChars: 3,
+              }}
+            />
           </div>
 
           {/* Status bar */}
@@ -747,7 +723,7 @@ export function AlgorithmEditor() {
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1.5">
                 <FileCode className="w-3.5 h-3.5" />
-                <strong>{language === 'python' ? 'Python 3' : 'JavaScript'}</strong>
+                <strong>{language === 'python' ? 'Python 3' : 'JavaScript (Node.js)'}</strong>
               </span>
               <span>Строк: <strong>{code.split('\n').length}</strong></span>
               <span>Символов: <strong>{code.length.toLocaleString()}</strong></span>
