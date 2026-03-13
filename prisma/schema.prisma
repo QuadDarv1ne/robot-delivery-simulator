@@ -39,6 +39,7 @@ model User {
   algorithms    Algorithm[]
   achievements  Achievement[]
   scenarios     DeliveryScenario[]
+  favoriteAlgorithms FavoriteAlgorithm[]
 }
 
 model UserSession {
@@ -106,9 +107,10 @@ model Algorithm {
   // Timestamps
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   // Relations
   deliveryResults DeliveryResult[]
+  favoritedBy     FavoriteAlgorithm[]
 }
 
 model Achievement {
@@ -187,4 +189,16 @@ model SystemSettings {
   value       String
   description String?
   updatedAt   DateTime @updatedAt
+}
+
+model FavoriteAlgorithm {
+  id          String   @id @default(cuid())
+  userId      String
+  algorithmId String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  algorithm   Algorithm @relation(fields: [algorithmId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, algorithmId])
 }
