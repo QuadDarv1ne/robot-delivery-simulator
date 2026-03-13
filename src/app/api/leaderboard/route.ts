@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { rateLimit, createRateLimitResponse, rateLimits, getClientIP } from '@/lib/rate-limit'
 
 interface LeaderboardUser {
   id: string
@@ -21,11 +22,18 @@ interface LeaderboardUser {
 }
 
 export async function GET(request: NextRequest) {
+  const limit = rateLimit(request, rateLimits.api)
+
+  if (limit.limited) {
+    return createRateLimitResponse(limit.resetTime)
+  }
+
   try {
     const searchParams = request.nextUrl.searchParams
     const period = searchParams.get('period') || 'all'
     const group = searchParams.get('group') || ''
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limitParam = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
 
     let dateFilter: any = {}
     const now = new Date()
@@ -116,11 +124,15 @@ export async function GET(request: NextRequest) {
     // Sort by score and add rank
     const sortedLeaderboard = leaderboard
       .sort((a, b) => b.score - a.score)
-      .slice(0, limit)
+
+    const total = sortedLeaderboard.length
+    const totalPages = Math.ceil(total / limitParam)
+    const paginatedLeaderboard = sortedLeaderboard
+      .slice((page - 1) * limitParam, page * limitParam)
       .map((user, index) => ({
         ...user,
-        rank: index + 1,
-        previousRank: null, // Could be calculated with historical data
+        rank: (page - 1) * limitParam + index + 1,
+        previousRank: null,
       }))
 
     // Get available groups for filter
@@ -134,23 +146,33 @@ export async function GET(request: NextRequest) {
     const currentUserId = request.headers.get('x-user-id')
     let currentUserPosition: LeaderboardUser | null = null
     if (currentUserId) {
-      const allSorted = leaderboard.sort((a, b) => b.score - a.score)
-      const position = allSorted.findIndex(u => u.id === currentUserId)
+      const position = sortedLeaderboard.findIndex(u => u.id === currentUserId)
       if (position !== -1) {
         currentUserPosition = {
-          ...allSorted[position],
+          ...sortedLeaderboard[position],
           rank: position + 1
         }
       }
     }
 
-    return NextResponse.json({
-      leaderboard: sortedLeaderboard,
+    const response = NextResponse.json({
+      leaderboard: paginatedLeaderboard,
       groups: groups.map(g => g.group).filter(Boolean),
       currentUserPosition,
       period,
-      total: leaderboard.length,
+      total,
+      pagination: {
+        page,
+        limit: limitParam,
+        totalPages,
+      },
     })
+
+    response.headers.set('X-RateLimit-Limit', rateLimits.api.maxRequests.toString())
+    response.headers.set('X-RateLimit-Remaining', limit.remaining.toString())
+    response.headers.set('X-RateLimit-Reset', limit.resetTime.toString())
+
+    return response
 
   } catch (error) {
     console.error('Leaderboard error:', error)
