@@ -11,25 +11,16 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
   
-  // Turbopack configuration (Next.js 16+)
-  turbopack: {
-    optimizePackageImports: ['@monaco-editor/react', 'lucide-react'],
-  },
+  // Turbopack config (Next.js 16+)
+  turbopack: {},
   
-  // Experimental features for better optimization
-  experimental: {
-    webpackBuildWorker: true,
-  },
-  
-  // Webpack configuration (for fallback)
+  // Webpack configuration
   webpack: (config, { isServer }) => {
-    // Reduce bundle size by removing unused locales
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
     };
     
-    // Split chunks for better caching
     if (!isServer) {
       config.optimization.splitChunks = {
         chunks: 'all',
