@@ -23,14 +23,13 @@ interface LeaderboardUser {
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
-    const period = searchParams.get('period') || 'all' // all, week, month
+    const period = searchParams.get('period') || 'all'
     const group = searchParams.get('group') || ''
-    const limit = parseInt(searchParams.get('limit') || '50')
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
 
-    // Build date filter
     let dateFilter: any = {}
     const now = new Date()
-    
+
     if (period === 'week') {
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
       dateFilter = { gte: weekAgo }
@@ -39,13 +38,11 @@ export async function GET(request: NextRequest) {
       dateFilter = { gte: monthAgo }
     }
 
-    // Build where clause for users
     const userWhere: any = { role: 'student' }
     if (group) {
       userWhere.group = group
     }
 
-    // Get leaderboard data
     const users = await db.user.findMany({
       where: userWhere,
       select: {
