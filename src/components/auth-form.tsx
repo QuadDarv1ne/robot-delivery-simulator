@@ -31,30 +31,45 @@ export function AuthForm({ onSuccess, onForgotPassword }: AuthFormProps) {
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
-  // Login form
+
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
-  
-  // Register form
+
   const [registerEmail, setRegisterEmail] = useState('')
   const [registerPassword, setRegisterPassword] = useState('')
   const [registerName, setRegisterName] = useState('')
   const [registerGroup, setRegisterGroup] = useState('')
 
+  const validateEmail = (email: string): boolean => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return regex.test(email)
+  }
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
-    
+
+    if (!validateEmail(loginEmail)) {
+      setError('Неверный формат email')
+      setIsLoading(false)
+      return
+    }
+
+    if (loginPassword.length < 6) {
+      setError('Пароль должен содержать минимум 6 символов')
+      setIsLoading(false)
+      return
+    }
+
     const result = await login(loginEmail, loginPassword)
-    
+
     if (result.success) {
       onSuccess?.()
     } else {
       setError(result.error || 'Ошибка входа')
     }
-    
+
     setIsLoading(false)
   }
 
@@ -62,15 +77,33 @@ export function AuthForm({ onSuccess, onForgotPassword }: AuthFormProps) {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
-    
+
+    if (!validateEmail(registerEmail)) {
+      setError('Неверный формат email')
+      setIsLoading(false)
+      return
+    }
+
+    if (registerPassword.length < 6) {
+      setError('Пароль должен содержать минимум 6 символов')
+      setIsLoading(false)
+      return
+    }
+
+    if (registerName.trim().length < 2) {
+      setError('Имя должно содержать минимум 2 символа')
+      setIsLoading(false)
+      return
+    }
+
     const result = await register(registerEmail, registerPassword, registerName, registerGroup)
-    
+
     if (result.success) {
       onSuccess?.()
     } else {
       setError(result.error || 'Ошибка регистрации')
     }
-    
+
     setIsLoading(false)
   }
 
