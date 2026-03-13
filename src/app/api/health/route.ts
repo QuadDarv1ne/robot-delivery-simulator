@@ -40,6 +40,9 @@ export async function GET() {
 
     return NextResponse.json(health, {
       status: health.status === 'healthy' ? 200 : 503,
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+      },
     })
   } catch (error) {
     console.error('Health check failed:', error)
