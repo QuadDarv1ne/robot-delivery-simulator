@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { algorithmSearchSchema } from '@/lib/validators'
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,17 +10,32 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
 
+    const validation = algorithmSearchSchema.safeParse({ q: query, language, page, limit })
+
+    if (!validation.success) {
+      const errors = validation.error.issues.map(e => ({
+        field: e.path.join('.'),
+        message: e.message
+      }))
+      return NextResponse.json(
+        { error: 'Ошибка валидации', details: errors },
+        { status: 400 }
+      )
+    }
+
+    const { q, language: lang, page: validatedPage, limit: validatedLimit } = validation.data
+
     const where: any = {}
 
-    if (query) {
+    if (q) {
       where.OR = [
-        { name: { contains: query, mode: 'insensitive' } },
-        { description: { contains: query, mode: 'insensitive' } }
+        { name: { contains: q, mode: 'insensitive' } },
+        { description: { contains: q, mode: 'insensitive' } }
       ]
     }
 
-    if (language) {
-      where.language = language
+    if (lang) {
+      where.language = lang
     }
 
     const [algorithms, total] = await Promise.all([
@@ -35,8 +51,8 @@ export async function GET(request: NextRequest) {
           }
         },
         orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit
+        skip: (validatedPage - 1) * validatedLimit,
+        take: validatedLimit
       }),
       db.algorithm.count({ where })
     ])
@@ -44,16 +60,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       algorithms,
       pagination: {
-        page,
-        limit,
+        page: validatedPage,
+        limit: validatedLimit,
         total,
-        pages: Math.ceil(total / limit)
+        pages: Math.ceil(total / validatedLimit)
       }
     })
   } catch (error) {
     console.error('Failed to search algorithms:', error)
     return NextResponse.json(
-      { error: 'Failed to search algorithms' },
+      { error: 'Ошибка поиска алгоритмов' },
       { status: 500 }
     )
   }

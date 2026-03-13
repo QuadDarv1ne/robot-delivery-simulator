@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { scenarioCreateSchema, scenarioUpdateSchema } from '@/lib/validators'
 
 // GET - List scenarios
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const publicOnly = searchParams.get('public') === 'true'
-    
+
     const where: any = {}
     if (publicOnly) {
       where.isPublic = true
@@ -55,27 +56,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const {
-      name,
-      description,
-      difficulty,
-      distance,
-      timeLimit,
-      weather,
-      traffic,
-      startPoint,
-      endPoint,
-      waypoints,
-      obstacles,
-      isPublic
-    } = body
+    const validation = scenarioCreateSchema.safeParse(body)
 
-    if (!name || !startPoint || !endPoint) {
+    if (!validation.success) {
+      const errors = validation.error.issues.map(e => ({
+        field: e.path.join('.'),
+        message: e.message
+      }))
       return NextResponse.json(
-        { error: 'Название, начальная и конечная точки обязательны' },
+        { error: 'Ошибка валидации', details: errors },
         { status: 400 }
       )
     }
+
+    const { name, description, difficulty, distance, timeLimit, weather, traffic, startPoint, endPoint, waypoints, obstacles, isPublic } = validation.data
 
     const scenario = await db.deliveryScenario.create({
       data: {
@@ -88,8 +82,8 @@ export async function POST(request: NextRequest) {
         traffic: traffic || 'low',
         startPoint,
         endPoint,
-        waypoints: waypoints || [],
-        obstacles: obstacles || [],
+        waypoints,
+        obstacles,
         isPublic: isPublic ?? true,
         createdById: user.id
       }
@@ -124,11 +118,20 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, ...updateData } = body
+    const validation = scenarioUpdateSchema.safeParse(body)
 
-    if (!id) {
-      return NextResponse.json({ error: 'ID сценария обязателен' }, { status: 400 })
+    if (!validation.success) {
+      const errors = validation.error.issues.map(e => ({
+        field: e.path.join('.'),
+        message: e.message
+      }))
+      return NextResponse.json(
+        { error: 'Ошибка валидации', details: errors },
+        { status: 400 }
+      )
     }
+
+    const { id, ...updateData } = validation.data
 
     // Check ownership or admin
     const existing = await db.deliveryScenario.findUnique({

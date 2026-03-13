@@ -266,7 +266,7 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
   
   const [selectedScenario, setSelectedScenario] = useState<DeliveryScenario | null>(null)
   const [deliverySession, setDeliverySession] = useState<DeliverySession | null>(null)
-  const [activeView, setActiveView] = useState<'simulator' | 'map' | 'lidar3d' | 'leaderboard' | 'algorithms'>('simulator')
+  const [activeView, setActiveView] = useState<'simulator' | 'map' | 'lidar3d' | 'scenarios' | 'leaderboard' | 'algorithms'>('simulator')
   
   const socketRef = useRef<Socket | null>(null)
 

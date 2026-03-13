@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { scenarioSearchSchema } from '@/lib/validators'
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,25 +11,40 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
 
+    const validation = scenarioSearchSchema.safeParse({ q: query, difficulty, weather, page, limit })
+
+    if (!validation.success) {
+      const errors = validation.error.issues.map(e => ({
+        field: e.path.join('.'),
+        message: e.message
+      }))
+      return NextResponse.json(
+        { error: 'Ошибка валидации', details: errors },
+        { status: 400 }
+      )
+    }
+
+    const { q, difficulty: diff, weather: w, page: validatedPage, limit: validatedLimit } = validation.data
+
     const where: any = {}
 
-    if (query) {
+    if (q) {
       where.OR = [
-        { name: { contains: query, mode: 'insensitive' } },
-        { description: { contains: query, mode: 'insensitive' } }
+        { name: { contains: q, mode: 'insensitive' } },
+        { description: { contains: q, mode: 'insensitive' } }
       ]
     }
 
-    if (difficulty) {
-      where.difficulty = difficulty
+    if (diff) {
+      where.difficulty = diff
     }
 
-    if (weather) {
-      where.weather = weather
+    if (w) {
+      where.weather = w
     }
 
     const [scenarios, total] = await Promise.all([
-      db.scenario.findMany({
+      db.deliveryScenario.findMany({
         where,
         include: {
           creator: {
@@ -39,25 +55,25 @@ export async function GET(request: NextRequest) {
           }
         },
         orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit
+        skip: (validatedPage - 1) * validatedLimit,
+        take: validatedLimit
       }),
-      db.scenario.count({ where })
+      db.deliveryScenario.count({ where })
     ])
 
     return NextResponse.json({
       scenarios,
       pagination: {
-        page,
-        limit,
+        page: validatedPage,
+        limit: validatedLimit,
         total,
-        pages: Math.ceil(total / limit)
+        pages: Math.ceil(total / validatedLimit)
       }
     })
   } catch (error) {
     console.error('Failed to search scenarios:', error)
     return NextResponse.json(
-      { error: 'Failed to search scenarios' },
+      { error: 'Ошибка поиска сценариев' },
       { status: 500 }
     )
   }

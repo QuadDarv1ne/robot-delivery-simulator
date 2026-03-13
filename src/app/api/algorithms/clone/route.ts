@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { algorithmCloneSchema } from '@/lib/validators'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { id } = body
+    const validation = algorithmCloneSchema.safeParse(body)
 
-    if (!id) {
+    if (!validation.success) {
+      const errors = validation.error.issues.map(e => ({
+        field: e.path.join('.'),
+        message: e.message
+      }))
       return NextResponse.json(
-        { error: 'Algorithm ID is required' },
+        { error: 'Ошибка валидации', details: errors },
         { status: 400 }
       )
     }
+
+    const { id } = validation.data
 
     const original = await db.algorithm.findUnique({
       where: { id }
@@ -19,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     if (!original) {
       return NextResponse.json(
-        { error: 'Algorithm not found' },
+        { error: 'Алгоритм не найден' },
         { status: 404 }
       )
     }
@@ -48,7 +55,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Failed to clone algorithm:', error)
     return NextResponse.json(
-      { error: 'Failed to clone algorithm' },
+      { error: 'Не удалось клонировать алгоритм' },
       { status: 500 }
     )
   }

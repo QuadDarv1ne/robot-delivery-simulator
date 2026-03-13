@@ -1,30 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { scenarioCloneSchema } from '@/lib/validators'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { id } = body
+    const validation = scenarioCloneSchema.safeParse(body)
 
-    if (!id) {
+    if (!validation.success) {
+      const errors = validation.error.issues.map(e => ({
+        field: e.path.join('.'),
+        message: e.message
+      }))
       return NextResponse.json(
-        { error: 'Scenario ID is required' },
+        { error: 'Ошибка валидации', details: errors },
         { status: 400 }
       )
     }
 
-    const original = await db.scenario.findUnique({
+    const { id } = validation.data
+
+    const original = await db.deliveryScenario.findUnique({
       where: { id }
     })
 
     if (!original) {
       return NextResponse.json(
-        { error: 'Scenario not found' },
+        { error: 'Сценарий не найден' },
         { status: 404 }
       )
     }
 
-    const cloned = await db.scenario.create({
+    const cloned = await db.deliveryScenario.create({
       data: {
         name: `${original.name} (Copy)`,
         description: original.description,
@@ -38,7 +45,7 @@ export async function POST(request: NextRequest) {
         waypoints: original.waypoints,
         obstacles: original.obstacles,
         isPublic: false,
-        creatorId: original.creatorId
+        createdById: original.createdById
       },
       include: {
         creator: {
@@ -54,7 +61,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Failed to clone scenario:', error)
     return NextResponse.json(
-      { error: 'Failed to clone scenario' },
+      { error: 'Не удалось клонировать сценарий' },
       { status: 500 }
     )
   }

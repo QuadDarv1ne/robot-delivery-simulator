@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { algorithmCreateSchema, algorithmUpdateSchema } from '@/lib/validators'
 
 // GET - List user's algorithms
 export async function GET(request: NextRequest) {
@@ -72,28 +73,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, description, code, language, isPublic } = body
+    const validation = algorithmCreateSchema.safeParse(body)
 
-    if (!name || typeof name !== 'string' || name.trim().length < 2) {
+    if (!validation.success) {
+      const errors = validation.error.issues.map(e => ({
+        field: e.path.join('.'),
+        message: e.message
+      }))
       return NextResponse.json(
-        { error: 'Название должно содержать минимум 2 символа' },
+        { error: 'Ошибка валидации', details: errors },
         { status: 400 }
       )
     }
 
-    if (!code || typeof code !== 'string' || code.length < 10) {
-      return NextResponse.json(
-        { error: 'Код алгоритма слишком короткий' },
-        { status: 400 }
-      )
-    }
-
-    if (code.length > 100000) {
-      return NextResponse.json(
-        { error: 'Код алгоритма слишком длинный (макс. 100KB)' },
-        { status: 400 }
-      )
-    }
+    const { name, description, code, language, isPublic } = validation.data
 
     const algorithm = await db.algorithm.create({
       data: {
@@ -135,7 +128,20 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, name, description, code, language, isPublic } = body
+    const validation = algorithmUpdateSchema.safeParse(body)
+
+    if (!validation.success) {
+      const errors = validation.error.issues.map(e => ({
+        field: e.path.join('.'),
+        message: e.message
+      }))
+      return NextResponse.json(
+        { error: 'Ошибка валидации', details: errors },
+        { status: 400 }
+      )
+    }
+
+    const { id, ...updateData } = validation.data
 
     // Check ownership
     const existing = await db.algorithm.findUnique({
@@ -154,11 +160,7 @@ export async function PUT(request: NextRequest) {
     const algorithm = await db.algorithm.update({
       where: { id },
       data: {
-        name,
-        description,
-        code,
-        language,
-        isPublic,
+        ...updateData,
         updatedAt: new Date()
       }
     })

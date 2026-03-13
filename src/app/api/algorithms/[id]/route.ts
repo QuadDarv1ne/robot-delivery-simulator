@@ -18,16 +18,15 @@ export async function GET(
             email: true
           }
         },
-        runs: {
-          orderBy: { createdAt: 'desc' },
-          take: 10
+        _count: {
+          select: { deliveryResults: true }
         }
       }
     })
 
     if (!algorithm) {
       return NextResponse.json(
-        { error: 'Algorithm not found' },
+        { error: 'Алгоритм не найден' },
         { status: 404 }
       )
     }
@@ -36,7 +35,7 @@ export async function GET(
   } catch (error) {
     console.error('Failed to fetch algorithm:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch algorithm' },
+      { error: 'Ошибка получения алгоритма' },
       { status: 500 }
     )
   }
