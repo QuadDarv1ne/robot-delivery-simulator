@@ -6,9 +6,8 @@ import { randomUUID } from 'crypto'
 import { rateLimit, createRateLimitResponse, rateLimits } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
-  // Rate limiting для auth endpoints
   const limit = rateLimit(request, rateLimits.auth)
-  
+
   if (limit.limited) {
     return createRateLimitResponse(limit.resetTime)
   }
@@ -16,14 +15,49 @@ export async function POST(request: NextRequest) {
   try {
     const { email, password, name, group } = await request.json()
 
-    if (!email || !password || !name) {
+    if (!email || typeof email !== 'string') {
       return NextResponse.json(
-        { error: 'Email, пароль и имя обязательны' },
+        { error: 'Email обязателен' },
         { status: 400 }
       )
     }
 
-    // Check if user exists
+    if (!password || typeof password !== 'string') {
+      return NextResponse.json(
+        { error: 'Пароль обязателен' },
+        { status: 400 }
+      )
+    }
+
+    if (!name || typeof name !== 'string') {
+      return NextResponse.json(
+        { error: 'Имя обязательно' },
+        { status: 400 }
+      )
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: 'Неверный формат email' },
+        { status: 400 }
+      )
+    }
+
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: 'Пароль должен содержать минимум 6 символов' },
+        { status: 400 }
+      )
+    }
+
+    if (name.trim().length < 2) {
+      return NextResponse.json(
+        { error: 'Имя должно содержать минимум 2 символа' },
+        { status: 400 }
+      )
+    }
+
     const existingUser = await db.user.findUnique({
       where: { email }
     })
@@ -35,25 +69,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    // Create user
     const user = await db.user.create({
       data: {
         email,
         password: hashedPassword,
-        name,
+        name: name.trim(),
         group: group || null,
         role: 'student'
       }
     })
 
-    // Create session token
     const token = randomUUID()
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
-    // Save session
     await db.userSession.create({
       data: {
         userId: user.id,
@@ -64,7 +94,6 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Set cookie
     const cookieStore = await cookies()
     cookieStore.set('session_token', token, {
       httpOnly: true,
@@ -83,7 +112,6 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Add rate limit headers
     response.headers.set('X-RateLimit-Limit', rateLimits.auth.maxRequests.toString())
     response.headers.set('X-RateLimit-Remaining', limit.remaining.toString())
     response.headers.set('X-RateLimit-Reset', limit.resetTime.toString())
