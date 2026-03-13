@@ -95,3 +95,24 @@ export const algorithmRunSchema = z.object({
   code: z.string().min(10, 'Код алгоритма слишком короткий'),
   algorithmId: z.string().cuid().optional()
 })
+
+export const loginSchema = z.object({
+  email: z.string().email('Неверный формат email'),
+  password: z.string().min(1, 'Пароль обязателен')
+})
+
+export const registerSchema = z.object({
+  email: z.string().email('Неверный формат email'),
+  password: z.string().min(6, 'Пароль должен содержать минимум 6 символов'),
+  name: z.string().min(2, 'Имя должно содержать минимум 2 символа'),
+  group: z.string().optional().nullable()
+})
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email('Неверный формат email')
+})
+
+export const resetPasswordSchema = z.object({
+  token: z.string(),
+  password: z.string().min(6, 'Пароль должен содержать минимум 6 символов')
+})

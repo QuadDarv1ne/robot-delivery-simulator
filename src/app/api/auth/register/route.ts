@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs'
 import { cookies } from 'next/headers'
 import { randomUUID } from 'crypto'
 import { rateLimit, createRateLimitResponse, rateLimits } from '@/lib/rate-limit'
+import { registerSchema } from '@/lib/validators'
 
 export async function POST(request: NextRequest) {
   const limit = rateLimit(request, rateLimits.auth)
@@ -13,50 +14,21 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { email, password, name, group } = await request.json()
+    const body = await request.json()
+    const validation = registerSchema.safeParse(body)
 
-    if (!email || typeof email !== 'string') {
+    if (!validation.success) {
+      const errors = validation.error.issues.map(e => ({
+        field: e.path.join('.'),
+        message: e.message
+      }))
       return NextResponse.json(
-        { error: 'Email обязателен' },
+        { error: 'Ошибка валидации', details: errors },
         { status: 400 }
       )
     }
 
-    if (!password || typeof password !== 'string') {
-      return NextResponse.json(
-        { error: 'Пароль обязателен' },
-        { status: 400 }
-      )
-    }
-
-    if (!name || typeof name !== 'string') {
-      return NextResponse.json(
-        { error: 'Имя обязательно' },
-        { status: 400 }
-      )
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: 'Неверный формат email' },
-        { status: 400 }
-      )
-    }
-
-    if (password.length < 6) {
-      return NextResponse.json(
-        { error: 'Пароль должен содержать минимум 6 символов' },
-        { status: 400 }
-      )
-    }
-
-    if (name.trim().length < 2) {
-      return NextResponse.json(
-        { error: 'Имя должно содержать минимум 2 символа' },
-        { status: 400 }
-      )
-    }
+    const { email, password, name, group } = validation.data
 
     const existingUser = await db.user.findUnique({
       where: { email }

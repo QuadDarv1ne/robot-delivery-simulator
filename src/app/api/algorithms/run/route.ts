@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { algorithmRunSchema } from '@/lib/validators'
 
 interface SimulationResult {
   success: boolean
@@ -132,7 +133,21 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { algorithmId, scenarioId, code } = body
+    const validation = algorithmRunSchema.safeParse(body)
+
+    if (!validation.success) {
+      const errors = validation.error.issues.map(e => ({
+        field: e.path.join('.'),
+        message: e.message
+      }))
+      return NextResponse.json(
+        { error: 'Ошибка валидации', details: errors },
+        { status: 400 }
+      )
+    }
+
+    const { algorithmId, code } = validation.data
+    const scenarioId = body.scenarioId as string | undefined
 
     // Get algorithm if ID provided
     let algorithmCode = code
