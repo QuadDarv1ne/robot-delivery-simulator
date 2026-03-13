@@ -36,12 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
-  // Check session on mount
-  useEffect(() => {
-    checkSession()
-  }, [])
-
-  const checkSession = async () => {
+  const checkSession = useCallback(async () => {
     try {
       const response = await fetch('/api/user/me')
       if (response.ok) {
@@ -53,9 +48,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
-  const login = async (email: string, password: string) => {
+  // Check session on mount
+  useEffect(() => {
+    checkSession()
+  }, [checkSession])
+
+  const login = useCallback(async (email: string, password: string) => {
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -72,11 +72,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       return { success: false, error: data.error || 'Ошибка входа' }
     } catch (error) {
+      console.error('Login error:', error)
       return { success: false, error: 'Ошибка соединения' }
     }
-  }
+  }, [])
 
-  const register = async (email: string, password: string, name: string, group?: string) => {
+  const register = useCallback(async (email: string, password: string, name: string, group?: string) => {
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
@@ -93,11 +94,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       return { success: false, error: data.error || 'Ошибка регистрации' }
     } catch (error) {
+      console.error('Register error:', error)
       return { success: false, error: 'Ошибка соединения' }
     }
-  }
+  }, [])
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
       setUser(null)
@@ -105,9 +107,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Logout error:', error)
     }
-  }
+  }, [router])
 
-  const updateUser = async (data: Partial<User>) => {
+  const updateUser = useCallback(async (data: Partial<User>) => {
     try {
       const response = await fetch('/api/user/profile', {
         method: 'PATCH',
@@ -122,11 +124,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Update user error:', error)
     }
-  }
+  }, [])
 
   const refreshUser = useCallback(async () => {
     await checkSession()
-  }, [])
+  }, [checkSession])
 
   return (
     <AuthContext.Provider value={{
