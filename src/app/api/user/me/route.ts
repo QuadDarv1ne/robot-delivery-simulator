@@ -14,14 +14,12 @@ export async function GET() {
       )
     }
 
-    // Find session
     const session = await db.userSession.findUnique({
       where: { token },
       include: { user: true }
     })
 
     if (!session || session.expiresAt < new Date()) {
-      // Delete expired session
       if (session) {
         await db.userSession.delete({ where: { token } })
       }
@@ -31,6 +29,11 @@ export async function GET() {
         { status: 401 }
       )
     }
+
+    await db.user.update({
+      where: { id: session.user.id },
+      data: { lastActiveAt: new Date() }
+    })
 
     return NextResponse.json({
       user: {
