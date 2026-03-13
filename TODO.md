@@ -43,14 +43,15 @@
   - getSensors, setSensors
   - addObstacle, removeObstacle, clearObstacles
   - Collision detection с препятствиями
+- Monaco Editor с автодополнением кода (Python/JavaScript)
+- Оптимизация сборки (turbopack, chunk splitting)
 
 ### 🔄 В работе
 
 ### 📋 План работ
 
 #### Улучшения
-- [ ] Добавить автодополнение в редакторах кода
-- [ ] Оптимизировать размер сборки
+- [ ] Продолжить оптимизацию размера сборки
 
 ---
 
