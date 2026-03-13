@@ -1,6 +1,14 @@
 import { createServer, IncomingMessage, ServerResponse } from 'http'
 import { Server } from 'socket.io'
 
+const LOG_PREFIX = '[RobotSimulator]'
+
+function log(level: 'info' | 'warn' | 'error', message: string, data?: unknown) {
+  const timestamp = new Date().toISOString()
+  const logFn = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log
+  logFn(`${LOG_PREFIX} [${level.toUpperCase()}] ${timestamp} - ${message}`, data || '')
+}
+
 // Health check HTTP server
 const healthServer = createServer((req: IncomingMessage, res: ServerResponse) => {
   if (req.url === '/health' && req.method === 'GET') {
@@ -23,8 +31,8 @@ const healthServer = createServer((req: IncomingMessage, res: ServerResponse) =>
 const io = new Server(healthServer, {
   path: '/',
   cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
+    origin: '*',
+    methods: ['GET', 'POST']
   },
   pingTimeout: 60000,
   pingInterval: 25000,
@@ -142,17 +150,17 @@ const broadcastInterval = setInterval(() => {
     const sensorData = generateSensorData()
     io.emit('sensor-data', { sensorData, robotState, timestamp: Date.now() })
   } catch (error) {
-    console.error('[WebSocket] Error broadcasting sensor data:', error)
+    log('error', 'Error broadcasting sensor data', error)
   }
 }, 100) // 10 Hz update rate
 
 io.on('connection', (socket) => {
-  console.log(`Client connected: ${socket.id}`)
+  log('info', `Client connected: ${socket.id}`)
 
   // Register client
   socket.on('register', (data: { type: 'simulator' | 'controller' | 'viewer' }) => {
     clients.set(socket.id, { id: socket.id, type: data.type })
-    console.log(`Client ${socket.id} registered as ${data.type}`)
+    log('info', `Client ${socket.id} registered as ${data.type}`)
 
     // Send initial state
     socket.emit('robot-state', robotState)
@@ -161,16 +169,16 @@ io.on('connection', (socket) => {
 
   // Handle connection errors
   socket.on('error', (error: Error) => {
-    console.error(`[WebSocket] Socket error (${socket.id}):`, error.message, error.stack)
+    log('error', `Socket error (${socket.id})`, error)
   })
 
   socket.on('connect_error', (error: Error) => {
-    console.error(`[WebSocket] Connection error (${socket.id}):`, error.message)
+    log('error', `Connection error (${socket.id})`, error)
   })
-  
+
   // Control commands from external systems
   socket.on('control', (command: ControlCommand) => {
-    console.log(`Control command received:`, command)
+    log('info', 'Control command received', command)
 
     try {
       switch (command.type) {
@@ -189,26 +197,26 @@ io.on('connection', (socket) => {
           robotState.status = 'moving'
           break
         default:
-          console.warn(`Unknown control command type: ${command.type}`)
+          log('warn', `Unknown control command type: ${command.type}`)
       }
 
       // Broadcast updated state
       io.emit('robot-state', robotState)
     } catch (error) {
-      console.error('[WebSocket] Error processing control command:', error)
+      log('error', 'Error processing control command', error)
       socket.emit('error', { message: 'Failed to process control command' })
     }
   })
-  
+
   // ROS Bridge protocol
   socket.on('ros-topic', (data: { topic: string; message: unknown }) => {
     // Forward ROS messages to simulator
     io.emit('ros-message', data)
   })
-  
+
   // Unity WebGL events
   socket.on('unity-event', (data: { event: string; payload: unknown }) => {
-    console.log(`Unity event: ${data.event}`, data.payload)
+    log('info', `Unity event: ${data.event}`)
     io.emit('unity-event', data)
   })
   
@@ -245,46 +253,46 @@ io.on('connection', (socket) => {
     } catch (error) {
       response.success = false
       response.error = error instanceof Error ? error.message : 'Unknown error'
-      console.error('[WebSocket] API command error:', error)
+      log('error', 'API command error', error)
     }
 
     socket.emit('api-response', { requestId: data.params.requestId, ...response })
   })
-  
+
   socket.on('disconnect', () => {
     clients.delete(socket.id)
-    console.log(`Client disconnected: ${socket.id}`)
+    log('info', `Client disconnected: ${socket.id}`)
   })
 })
 
 const PORT = 3003
 healthServer.listen(PORT, () => {
-  console.log(`Robot Simulator WebSocket server running on port ${PORT}`)
-  console.log(`Health check endpoint: http://localhost:${PORT}/health`)
+  log('info', `Robot Simulator WebSocket server running on port ${PORT}`)
+  log('info', `Health check endpoint: http://localhost:${PORT}/health`)
 })
 
 // Graceful shutdown
 function gracefulShutdown(signal: string) {
-  console.log(`Received ${signal} signal, shutting down server...`)
-  
+  log('info', `Received ${signal} signal, shutting down server...`)
+
   // Clear broadcast interval
   if (broadcastInterval) {
     clearInterval(broadcastInterval)
   }
-  
+
   // Disconnect all clients
   io.sockets.sockets.forEach((socket) => {
     socket.disconnect(true)
   })
-  
+
   healthServer.close(() => {
-    console.log('WebSocket server closed')
+    log('info', 'WebSocket server closed')
     process.exit(0)
   })
-  
+
   // Force exit after timeout
   setTimeout(() => {
-    console.error('Forcing exit after timeout')
+    log('error', 'Forcing exit after timeout')
     process.exit(1)
   }, 10000)
 }
@@ -294,10 +302,10 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'))
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
-  console.error('[WebSocket] Uncaught Exception:', error)
+  log('error', 'Uncaught Exception', error)
   gracefulShutdown('uncaughtException')
 })
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('[WebSocket] Unhandled Rejection at:', promise, 'reason:', reason)
+  log('error', `Unhandled Rejection at: ${promise}`, reason)
 })
