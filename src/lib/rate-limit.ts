@@ -27,15 +27,16 @@ const apiConfig: RateLimitConfig = {
   maxRequests: 30,
 }
 
-// Cleanup old entries every 5 minutes
-setInterval(() => {
+function cleanupExpiredEntries() {
   const now = Date.now()
   for (const [key, value] of clients.entries()) {
     if (now > value.resetTime) {
       clients.delete(key)
     }
   }
-}, 5 * 60 * 1000)
+}
+
+setInterval(cleanupExpiredEntries, 5 * 60 * 1000)
 
 export function getClientIP(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for')
@@ -51,9 +52,9 @@ export function rateLimit(
 ): { limited: boolean; remaining: number; resetTime: number } {
   const ip = getClientIP(request)
   const now = Date.now()
-  
+
   let client = clients.get(ip)
-  
+
   if (!client || now > client.resetTime) {
     client = {
       count: 1,
@@ -62,34 +63,34 @@ export function rateLimit(
     clients.set(ip, client)
     return { limited: false, remaining: config.maxRequests - 1, resetTime: client.resetTime }
   }
-  
+
   client.count++
-  
+
   if (client.count > config.maxRequests) {
-    return { 
-      limited: true, 
-      remaining: 0, 
-      resetTime: client.resetTime 
+    return {
+      limited: true,
+      remaining: 0,
+      resetTime: client.resetTime
     }
   }
-  
-  return { 
-    limited: false, 
-    remaining: config.maxRequests - client.count, 
-    resetTime: client.resetTime 
+
+  return {
+    limited: false,
+    remaining: config.maxRequests - client.count,
+    resetTime: client.resetTime
   }
 }
 
 export function createRateLimitResponse(resetTime: number): NextResponse {
   const retryAfter = Math.ceil((resetTime - Date.now()) / 1000)
-  
+
   return NextResponse.json(
-    { 
+    {
       error: 'Too Many Requests',
       message: 'Rate limit exceeded. Please try again later.',
-      retryAfter 
+      retryAfter
     },
-    { 
+    {
       status: 429,
       headers: {
         'X-RateLimit-Limit': '10',
@@ -104,12 +105,17 @@ export function createRateLimitResponse(resetTime: number): NextResponse {
 export function addRateLimitHeaders(
   response: NextResponse,
   remaining: number,
-  resetTime: number
+  resetTime: number,
+  limit: number = defaultConfig.maxRequests
 ): NextResponse {
-  response.headers.set('X-RateLimit-Limit', defaultConfig.maxRequests.toString())
+  response.headers.set('X-RateLimit-Limit', limit.toString())
   response.headers.set('X-RateLimit-Remaining', remaining.toString())
   response.headers.set('X-RateLimit-Reset', resetTime.toString())
   return response
+}
+
+export function clearRateLimitCache(): void {
+  clients.clear()
 }
 
 export const rateLimits = {
