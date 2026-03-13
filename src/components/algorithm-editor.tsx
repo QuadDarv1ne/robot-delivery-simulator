@@ -202,12 +202,17 @@ export function AlgorithmEditor() {
 
       const response = await fetch(url)
       if (!response.ok) {
+        if (response.status === 401) {
+          toast.error('Требуется авторизация')
+          return
+        }
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       const data = await response.json()
       setAlgorithms(data.algorithms || [])
     } catch (error) {
       console.error('Failed to fetch algorithms:', error)
+      toast.error('Ошибка загрузки алгоритмов')
     } finally {
       setIsLoading(false)
     }

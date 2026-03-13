@@ -130,12 +130,17 @@ export function ScenarioEditor() {
 
       const response = await fetch(url)
       if (!response.ok) {
+        if (response.status === 401) {
+          toast.error('Требуется авторизация')
+          return
+        }
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       const data = await response.json()
       setScenarios(data.scenarios || [])
     } catch (error) {
       console.error('Failed to fetch scenarios:', error)
+      toast.error('Ошибка загрузки сценариев')
     } finally {
       setIsLoading(false)
     }
