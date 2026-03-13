@@ -57,9 +57,12 @@ interface SensorData {
 }
 
 interface ControlCommand {
-  type: 'move' | 'stop' | 'setSpeed' | 'setDestination'
+  type: 'move' | 'stop' | 'setSpeed' | 'setDestination' | 'getBattery' | 'getLocation' | 'resetPosition' | 'getSensors' | 'setSensors' | 'addObstacle' | 'removeObstacle' | 'clearObstacles'
   data: Record<string, unknown>
 }
+
+// Simulated obstacles
+const obstacles = new Map<string, { type: 'pedestrian' | 'vehicle' | 'construction'; position: { x: number; y: number; z: number }; radius: number }>()
 
 // Simulated robot state
 let robotState: RobotState = {
@@ -125,13 +128,29 @@ function generateSensorData(): SensorData {
 // Update robot state
 function updateRobotState() {
   const now = Date.now()
-  
+
   if (robotState.status === 'moving') {
     robotState.position.x += Math.sin(now / 1000) * 0.1
     robotState.position.z += Math.cos(now / 1000) * 0.1
     robotState.rotation.y = (now / 1000) % 360
+
+    // Check for collisions with obstacles
+    for (const [id, obstacle] of obstacles.entries()) {
+      const dx = robotState.position.x - obstacle.position.x
+      const dz = robotState.position.z - obstacle.position.z
+      const distance = Math.sqrt(dx * dx + dz * dz)
+      
+      if (distance < obstacle.radius + 1) {
+        // Collision detected
+        robotState.status = 'error'
+        robotState.velocity = { x: 0, y: 0, z: 0 }
+        io.emit('collision', { obstacleId: id, position: robotState.position })
+        log('warn', `Collision detected with obstacle ${id}`)
+        break
+      }
+    }
   }
-  
+
   // Simulate battery drain
   if (robotState.status !== 'charging') {
     robotState.battery = Math.max(0, robotState.battery - 0.001)
@@ -195,6 +214,52 @@ io.on('connection', (socket) => {
           break
         case 'setDestination':
           robotState.status = 'moving'
+          break
+        case 'getBattery':
+          socket.emit('battery-status', { battery: robotState.battery, status: robotState.status })
+          break
+        case 'getLocation':
+          socket.emit('location', { 
+            position: robotState.position, 
+            rotation: robotState.rotation,
+            gps: generateSensorData().gps
+          })
+          break
+        case 'resetPosition':
+          robotState.position = { x: 0, y: 0, z: 0 }
+          robotState.rotation = { x: 0, y: 0, z: 0 }
+          robotState.velocity = { x: 0, y: 0, z: 0 }
+          socket.emit('robot-state', robotState)
+          break
+        case 'getSensors':
+          socket.emit('sensor-data', { sensorData: generateSensorData(), robotState, timestamp: Date.now() })
+          break
+        case 'setSensors':
+          // Override sensor data for testing
+          log('info', 'Sensor override received', command.data)
+          break
+        case 'addObstacle':
+          const obstacleId = command.data.id as string || `obs-${Date.now()}`
+          obstacles.set(obstacleId, {
+            type: (command.data.type as 'pedestrian' | 'vehicle' | 'construction') || 'construction',
+            position: command.data.position as { x: number; y: number; z: number } || { x: 5, y: 0, z: 5 },
+            radius: (command.data.radius as number) || 1
+          })
+          io.emit('obstacles-update', { obstacles: Array.from(obstacles.entries()) })
+          log('info', `Obstacle added: ${obstacleId}`)
+          break
+        case 'removeObstacle':
+          const removeId = command.data.id as string
+          if (removeId && obstacles.has(removeId)) {
+            obstacles.delete(removeId)
+            io.emit('obstacles-update', { obstacles: Array.from(obstacles.entries()) })
+            log('info', `Obstacle removed: ${removeId}`)
+          }
+          break
+        case 'clearObstacles':
+          obstacles.clear()
+          io.emit('obstacles-update', { obstacles: [] })
+          log('info', 'All obstacles cleared')
           break
         default:
           log('warn', `Unknown control command type: ${command.type}`)

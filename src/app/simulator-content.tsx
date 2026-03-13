@@ -328,6 +328,19 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
     socket.on('error', handleError)
     socket.on('sensor-data', handleSensorData)
     socket.on('robot-state', handleRobotState)
+    socket.on('battery-status', (data: { battery: number; status: string }) => {
+      console.log('[WebSocket] Battery status:', data)
+    })
+    socket.on('location', (data: { position: { x: number; y: number; z: number }; rotation: { x: number; y: number; z: number }; gps: { lat: number; lon: number; altitude: number; accuracy: number } }) => {
+      console.log('[WebSocket] Location:', data)
+    })
+    socket.on('obstacles-update', (data: { obstacles: Array<[string, { type: string; position: { x: number; y: number; z: number }; radius: number }]> }) => {
+      console.log('[WebSocket] Obstacles updated:', data.obstacles.length)
+    })
+    socket.on('collision', (data: { obstacleId: string; position: { x: number; y: number; z: number } }) => {
+      console.warn('[WebSocket] Collision detected:', data)
+      toast.error(`Столкновение с препятствием ${data.obstacleId}`)
+    })
 
     return () => {
       console.log('[WebSocket] Cleaning up connection')
@@ -337,6 +350,10 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
       socket.off('error', handleError)
       socket.off('sensor-data', handleSensorData)
       socket.off('robot-state', handleRobotState)
+      socket.off('battery-status')
+      socket.off('location')
+      socket.off('obstacles-update')
+      socket.off('collision')
       socket.disconnect()
       socketRef.current = null
     }
@@ -347,6 +364,30 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
       socketRef.current.emit('control', { type, data: data || {} })
     }
   }, [])
+
+  const handleGetBattery = useCallback(() => {
+    sendCommand('getBattery')
+  }, [sendCommand])
+
+  const handleGetLocation = useCallback(() => {
+    sendCommand('getLocation')
+  }, [sendCommand])
+
+  const handleResetPosition = useCallback(() => {
+    sendCommand('resetPosition')
+  }, [sendCommand])
+
+  const handleAddObstacle = useCallback((id: string, type: 'pedestrian' | 'vehicle' | 'construction', position: { x: number; y: number; z: number }, radius: number) => {
+    sendCommand('addObstacle', { id, type, position, radius })
+  }, [sendCommand])
+
+  const handleRemoveObstacle = useCallback((id: string) => {
+    sendCommand('removeObstacle', { id })
+  }, [sendCommand])
+
+  const handleClearObstacles = useCallback(() => {
+    sendCommand('clearObstacles')
+  }, [sendCommand])
   
   const handleSelectScenario = (scenario: DeliveryScenario) => {
     setSelectedScenario(scenario)
