@@ -38,13 +38,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkSession = useCallback(async () => {
     try {
-      const response = await fetch('/api/user/me')
+      const response = await fetch('/api/user/me', { cache: 'no-store' })
       if (response.ok) {
         const data = await response.json()
         setUser(data.user)
+      } else if (response.status === 401) {
+        setUser(null)
       }
     } catch (error) {
-      console.error('Session check error:', error)
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.warn('Network error during session check')
+      }
     } finally {
       setIsLoading(false)
     }
@@ -63,14 +67,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ email, password })
       })
 
-      const data = await response.json()
-
-      if (response.ok) {
-        setUser(data.user)
-        return { success: true }
+      if (!response.ok) {
+        const data = await response.json()
+        return { success: false, error: data.error || 'Ошибка входа' }
       }
 
-      return { success: false, error: data.error || 'Ошибка входа' }
+      const data = await response.json()
+      setUser(data.user)
+      return { success: true }
     } catch (error) {
       console.error('Login error:', error)
       return { success: false, error: 'Ошибка соединения' }
@@ -85,14 +89,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ email, password, name, group })
       })
 
-      const data = await response.json()
-
-      if (response.ok) {
-        setUser(data.user)
-        return { success: true }
+      if (!response.ok) {
+        const data = await response.json()
+        return { success: false, error: data.error || 'Ошибка регистрации' }
       }
 
-      return { success: false, error: data.error || 'Ошибка регистрации' }
+      const data = await response.json()
+      setUser(data.user)
+      return { success: true }
     } catch (error) {
       console.error('Register error:', error)
       return { success: false, error: 'Ошибка соединения' }
@@ -102,10 +106,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
-      setUser(null)
-      router.refresh()
     } catch (error) {
       console.error('Logout error:', error)
+    } finally {
+      setUser(null)
+      router.refresh()
     }
   }, [router])
 
@@ -117,10 +122,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(data)
       })
 
-      if (response.ok) {
-        const updated = await response.json()
-        setUser(prev => prev ? { ...prev, ...updated.user } : null)
+      if (!response.ok) {
+        return
       }
+
+      const updated = await response.json()
+      setUser(prev => prev ? { ...prev, ...updated.user } : null)
     } catch (error) {
       console.error('Update user error:', error)
     }
