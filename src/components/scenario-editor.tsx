@@ -110,21 +110,26 @@ export function ScenarioEditor() {
   const [searchDifficulty, setSearchDifficulty] = useState('')
   const [searchWeather, setSearchWeather] = useState('')
   const [isCloning, setIsCloning] = useState(false)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(0)
+  const [totalItems, setTotalItems] = useState(0)
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     fetchScenarios()
   }, [])
 
-  const fetchScenarios = async (searchParams?: { query?: string; difficulty?: string; weather?: string }) => {
+  const fetchScenarios = async (searchParams?: { query?: string; difficulty?: string; weather?: string; page?: number }) => {
     setIsLoading(true)
     try {
       const params = new URLSearchParams()
       if (searchParams?.query) params.set('q', searchParams.query)
       if (searchParams?.difficulty) params.set('difficulty', searchParams.difficulty)
       if (searchParams?.weather) params.set('weather', searchParams.weather)
+      if (searchParams?.page) params.set('page', searchParams.page.toString())
+      params.set('limit', '10')
 
-      const url = searchParams?.query || searchParams?.difficulty || searchParams?.weather
+      const url = searchParams?.query || searchParams?.difficulty || searchParams?.weather || searchParams?.page
         ? `/api/scenarios/search?${params.toString()}`
         : '/api/scenarios'
 
@@ -138,6 +143,11 @@ export function ScenarioEditor() {
       }
       const data = await response.json()
       setScenarios(data.scenarios || [])
+      if (data.pagination) {
+        setTotalPages(data.pagination.pages)
+        setTotalItems(data.pagination.total)
+        setPage(data.pagination.page)
+      }
     } catch (error) {
       console.error('Failed to fetch scenarios:', error)
       toast.error('Ошибка загрузки сценариев')
@@ -151,13 +161,25 @@ export function ScenarioEditor() {
       clearTimeout(searchDebounceRef.current)
     }
     searchDebounceRef.current = setTimeout(() => {
+      setPage(1)
       fetchScenarios({
         query: searchQuery || undefined,
         difficulty: searchDifficulty || undefined,
-        weather: searchWeather || undefined
+        weather: searchWeather || undefined,
+        page: 1
       })
     }, 300)
   }, [searchQuery, searchDifficulty, searchWeather])
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage)
+    fetchScenarios({
+      query: searchQuery || undefined,
+      difficulty: searchDifficulty || undefined,
+      weather: searchWeather || undefined,
+      page: newPage
+    })
+  }
 
   const handleNewScenario = () => {
     setSelectedScenario(null)
@@ -424,6 +446,36 @@ export function ScenarioEditor() {
               </div>
             )}
           </ScrollArea>
+          {totalPages > 1 && (
+            <div className="p-2 border-t flex items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground">
+                {totalItems} сценариев
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => handlePageChange(page - 1)}
+                  className="h-7 px-2"
+                >
+                  ←
+                </Button>
+                <span className="text-xs px-2">
+                  {page} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => handlePageChange(page + 1)}
+                  className="h-7 px-2"
+                >
+                  →
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

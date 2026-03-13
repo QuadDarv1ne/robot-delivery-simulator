@@ -187,16 +187,21 @@ export function AlgorithmEditor() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchLanguage, setSearchLanguage] = useState('')
   const [isCloning, setIsCloning] = useState(false)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(0)
+  const [totalItems, setTotalItems] = useState(0)
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null)
 
-  const fetchAlgorithms = useCallback(async (searchParams?: { query?: string; language?: string }) => {
+  const fetchAlgorithms = useCallback(async (searchParams?: { query?: string; language?: string; page?: number }) => {
     setIsLoading(true)
     try {
       const params = new URLSearchParams()
       if (searchParams?.query) params.set('q', searchParams.query)
       if (searchParams?.language) params.set('language', searchParams.language)
+      if (searchParams?.page) params.set('page', searchParams.page.toString())
+      params.set('limit', '10')
 
-      const url = searchParams?.query || searchParams?.language
+      const url = searchParams?.query || searchParams?.language || searchParams?.page
         ? `/api/algorithms/search?${params.toString()}`
         : '/api/algorithms'
 
@@ -210,6 +215,11 @@ export function AlgorithmEditor() {
       }
       const data = await response.json()
       setAlgorithms(data.algorithms || [])
+      if (data.pagination) {
+        setTotalPages(data.pagination.pages)
+        setTotalItems(data.pagination.total)
+        setPage(data.pagination.page)
+      }
     } catch (error) {
       console.error('Failed to fetch algorithms:', error)
       toast.error('Ошибка загрузки алгоритмов')
@@ -227,12 +237,23 @@ export function AlgorithmEditor() {
       clearTimeout(searchDebounceRef.current)
     }
     searchDebounceRef.current = setTimeout(() => {
+      setPage(1)
       fetchAlgorithms({
         query: searchQuery || undefined,
-        language: searchLanguage || undefined
+        language: searchLanguage || undefined,
+        page: 1
       })
     }, 300)
   }, [searchQuery, searchLanguage, fetchAlgorithms])
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage)
+    fetchAlgorithms({
+      query: searchQuery || undefined,
+      language: searchLanguage || undefined,
+      page: newPage
+    })
+  }
 
   const handleNewAlgorithm = () => {
     setSelectedAlgorithm(null)
@@ -540,6 +561,36 @@ export function AlgorithmEditor() {
               </div>
             )}
           </ScrollArea>
+          {totalPages > 1 && (
+            <div className="p-2 border-t flex items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground">
+                {totalItems} алгоритмов
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => handlePageChange(page - 1)}
+                  className="h-7 px-2"
+                >
+                  ←
+                </Button>
+                <span className="text-xs px-2">
+                  {page} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => handlePageChange(page + 1)}
+                  className="h-7 px-2"
+                >
+                  →
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
