@@ -31,7 +31,8 @@ describe('API Endpoints', () => {
       expect(response.status).toBe(200)
       const data = await response.json()
       expect(data.status).toBe('healthy')
-      expect(data.services.database).toBe('connected')
+      expect(data.services.database.status).toBe('connected')
+      expect(data.services.database.latency).toBeGreaterThanOrEqual(0)
     })
 
     it('should return unhealthy status when database is disconnected', async () => {
@@ -44,6 +45,7 @@ describe('API Endpoints', () => {
       expect(response.status).toBe(503)
       const data = await response.json()
       expect(data.status).toBe('unhealthy')
+      expect(data.services.database.status).toBe('error')
     })
   })
 
