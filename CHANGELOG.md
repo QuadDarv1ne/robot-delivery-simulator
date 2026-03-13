@@ -8,31 +8,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Health check script (`scripts/health-check.js`)
-- npm scripts: `validate`, `clean`, `healthcheck`
-- GitHub Pages workflow for documentation
-- Russian issue templates
-- Projects configuration guide
-- TODO.md with project roadmap
+- Testing infrastructure with Jest and Playwright
+  - Jest configuration (`jest.config.ts`) with ts-jest preset
+  - Playwright E2E testing configuration (`playwright.config.ts`)
+  - Unit tests for utility functions (`tests/utils.test.ts`)
+  - API endpoint tests (`tests/api.test.ts`)
+  - Component tests (`tests/components.test.ts`)
+  - E2E smoke tests (`tests-e2e/smoke.test.ts`)
+- Test coverage reporting with Codecov integration
+- New npm scripts: `test:coverage` for coverage reports
+- Testing dependencies:
+  - `jest`, `ts-jest`, `@types/jest`
+  - `@testing-library/react`, `@testing-library/jest-dom`
+  - `@playwright/test`
+  - `identity-obj-proxy` for CSS module mocking
+- CI/CD improvements:
+  - Updated test job to run with coverage
+  - Added Prisma generation step before tests
+  - Added Codecov upload step
 
 ### Changed
-- Updated CI/CD workflow to use `dev` branch instead of `develop`
-- Added `--legacy-peer-deps` to CI installation
-- README made Russian by default (English moved to `README.en.md`)
+- Updated `.github/workflows/ci.yml` to run tests with coverage
+- Enhanced test job to include Prisma client generation
 
 ### Fixed
-- TypeScript errors in core modules:
-  - `src/lib/auth.ts` - Added proper type extensions for NextAuth
-  - `src/lib/auth-context.tsx` - Added missing user properties
-  - `src/app/api/leaderboard/route.ts` - Added LeaderboardUser interface
-  - `src/app/api/reports/export/route.ts` - Fixed variable scoping and types
-  - `src/app/simulator-content.tsx` - Fixed useEffect cleanup
-  - `src/components/analytics-panel.tsx` - Fixed icon and color types
-  - `src/components/user-profile.tsx` - Fixed undefined checks
-- ESLint configuration for Next.js 16
+- Removed `package-lock.json` from repository (now in `.gitignore`)
 
-### Removed
-- Old README.ru.md (merged into README.md)
+### Technical
+- All tests passing (11 unit tests)
+- Lint and type-check passing
+- Build successful with no errors
 
 ## [1.0.0] - 2024-01-01
 
