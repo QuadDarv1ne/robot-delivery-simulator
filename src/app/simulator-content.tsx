@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { toast } from 'sonner'
 import { io, Socket } from 'socket.io-client'
 import dynamic from 'next/dynamic'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -300,15 +301,20 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
     const handleDisconnect = (reason: string) => {
       console.warn(`[WebSocket] Disconnected: ${reason}`)
       setState(prev => ({ ...prev, isConnected: false }))
+      if (reason === 'io server disconnect') {
+        toast.error('Сервер симуляции отключён')
+      }
     }
 
     const handleConnectError = (error: Error) => {
       console.error('[WebSocket] Connection error:', error.message)
       setState(prev => ({ ...prev, isConnected: false }))
+      toast.error('Не удалось подключиться к серверу симуляции')
     }
 
     const handleError = (error: Error) => {
       console.error('[WebSocket] Socket error:', error)
+      toast.error('Ошибка соединения')
     }
 
     socket.on('connect', handleConnect)
