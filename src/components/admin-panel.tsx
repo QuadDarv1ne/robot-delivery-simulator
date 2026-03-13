@@ -481,13 +481,13 @@ export function AdminPanel({ onLogout }: AdminPanelProps) {
                       className="pl-10"
                     />
                   </div>
-                  <Select value={roleFilter} onValueChange={setRoleFilter}>
+                  <Select value={roleFilter || 'all'} onValueChange={(v) => setRoleFilter(v === 'all' ? '' : v)}>
                     <SelectTrigger className="w-40">
                       <Filter className="w-4 h-4 mr-2" />
                       <SelectValue placeholder="Роль" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Все</SelectItem>
+                      <SelectItem value="all">Все</SelectItem>
                       <SelectItem value="student">Студенты</SelectItem>
                       <SelectItem value="teacher">Преподаватели</SelectItem>
                       <SelectItem value="admin">Админы</SelectItem>

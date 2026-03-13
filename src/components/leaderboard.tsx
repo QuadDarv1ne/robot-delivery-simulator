@@ -230,13 +230,13 @@ export function Leaderboard({ currentUserId }: LeaderboardProps) {
                 </SelectContent>
               </Select>
 
-              <Select value={group} onValueChange={setGroup}>
+              <Select value={group || 'all'} onValueChange={(v) => setGroup(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-36">
                   <Users className="w-4 h-4 mr-2" />
                   <SelectValue placeholder="Группа" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Все группы</SelectItem>
+                  <SelectItem value="all">Все группы</SelectItem>
                   {data?.groups.map(g => (
                     <SelectItem key={g} value={g}>{g}</SelectItem>
                   ))}
