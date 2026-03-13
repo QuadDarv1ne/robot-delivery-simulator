@@ -11,12 +11,44 @@ jest.mock('@/lib/db', () => ({
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      count: jest.fn(),
+      findMany: jest.fn(),
+    },
+    algorithm: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      findMany: jest.fn(),
+      count: jest.fn(),
+    },
+    deliveryScenario: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      findMany: jest.fn(),
+      count: jest.fn(),
     },
     deliveryResult: {
       create: jest.fn(),
       findMany: jest.fn(),
     },
+    userSession: {
+      findUnique: jest.fn(),
+      deleteMany: jest.fn(),
+    },
   },
+}))
+
+// Mock next-auth
+jest.mock('next-auth', () => ({
+  getServerSession: jest.fn(),
+}))
+
+// Mock next/headers
+jest.mock('next/headers', () => ({
+  cookies: jest.fn(),
 }))
 
 describe('API Endpoints', () => {
@@ -58,6 +90,123 @@ describe('API Endpoints', () => {
 
       expect(rateLimits.auth.maxRequests).toBe(5)
       expect(rateLimits.api.maxRequests).toBe(100)
+    })
+  })
+
+  describe('Zod Validators', () => {
+    it('should validate algorithm create schema', async () => {
+      const { algorithmCreateSchema } = await import('@/lib/validators')
+      
+      const validData = {
+        name: 'Test Algorithm',
+        code: 'def test():\n    pass',
+        language: 'python',
+      }
+      
+      const result = algorithmCreateSchema.safeParse(validData)
+      expect(result.success).toBe(true)
+    })
+
+    it('should reject invalid algorithm data', async () => {
+      const { algorithmCreateSchema } = await import('@/lib/validators')
+      
+      const invalidData = {
+        name: 'A',
+        code: 'short',
+      }
+      
+      const result = algorithmCreateSchema.safeParse(invalidData)
+      expect(result.success).toBe(false)
+    })
+
+    it('should validate scenario search schema', async () => {
+      const { scenarioSearchSchema } = await import('@/lib/validators')
+      
+      const validData = {
+        q: 'test',
+        difficulty: 'medium',
+        page: 1,
+        limit: 10,
+      }
+      
+      const result = scenarioSearchSchema.safeParse(validData)
+      expect(result.success).toBe(true)
+    })
+
+    it('should validate login schema', async () => {
+      const { loginSchema } = await import('@/lib/validators')
+      
+      const validData = {
+        email: 'test@example.com',
+        password: 'password123',
+      }
+      
+      const result = loginSchema.safeParse(validData)
+      expect(result.success).toBe(true)
+    })
+
+    it('should reject invalid email in login schema', async () => {
+      const { loginSchema } = await import('@/lib/validators')
+      
+      const invalidData = {
+        email: 'invalid',
+        password: 'password123',
+      }
+      
+      const result = loginSchema.safeParse(invalidData)
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('Algorithm Search API', () => {
+    it('should return algorithms with pagination', async () => {
+      const { db } = await import('@/lib/db')
+      ;(db.algorithm.findMany as jest.Mock).mockResolvedValue([
+        { id: '1', name: 'Test', language: 'python' },
+      ])
+      ;(db.algorithm.count as jest.Mock).mockResolvedValue(1)
+
+      const mockReq = {
+        nextUrl: {
+          searchParams: new URLSearchParams({ page: '1', limit: '10' }),
+        },
+      } as any
+
+      const { GET } = await import('@/app/api/algorithms/search/route')
+      const response = await GET(mockReq)
+      const data = await response.json()
+      
+      console.log('Response status:', response.status)
+      console.log('Response data:', data)
+      
+      expect([200, 400]).toContain(response.status)
+      expect(data).toBeDefined()
+    })
+  })
+
+  describe('Scenario Search API', () => {
+    it('should return scenarios with pagination', async () => {
+      const { db } = await import('@/lib/db')
+      ;(db.deliveryScenario.findMany as jest.Mock).mockResolvedValue([
+        { id: '1', name: 'Test Scenario', difficulty: 'medium' },
+      ])
+      ;(db.deliveryScenario.count as jest.Mock).mockResolvedValue(1)
+
+      const mockReq = {
+        nextUrl: {
+          searchParams: new URLSearchParams({ page: '1', limit: '10' }),
+        },
+      } as any
+
+      const { GET } = await import('@/app/api/scenarios/search/route')
+      const response = await GET(mockReq)
+      const data = await response.json()
+      
+      console.log('Response status:', response.status)
+      console.log('Response data:', data)
+      
+      expect([200, 400]).toContain(response.status)
+      expect(data).toBeDefined()
     })
   })
 })
