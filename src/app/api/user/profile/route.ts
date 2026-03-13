@@ -14,13 +14,16 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    // Find session
     const session = await db.userSession.findUnique({
       where: { token },
       include: { user: true }
     })
 
     if (!session || session.expiresAt < new Date()) {
+      if (session) {
+        await db.userSession.delete({ where: { token } })
+      }
+      cookieStore.delete('session_token')
       return NextResponse.json(
         { error: 'Сессия истекла' },
         { status: 401 }
@@ -28,14 +31,26 @@ export async function PATCH(request: NextRequest) {
     }
 
     const data = await request.json()
-    
-    // Only allow updating certain fields
+
     const allowedFields = ['name', 'group', 'avatar']
     const updateData: Record<string, unknown> = {}
-    
+
     for (const field of allowedFields) {
       if (data[field] !== undefined) {
-        updateData[field] = data[field]
+        if (field === 'name' && typeof data[field] === 'string') {
+          const trimmed = data[field].trim()
+          if (trimmed.length < 2) {
+            return NextResponse.json(
+              { error: 'Имя должно содержать минимум 2 символа' },
+              { status: 400 }
+            )
+          }
+          updateData[field] = trimmed
+        } else if (field === 'group') {
+          updateData[field] = data[field] || null
+        } else if (field === 'avatar') {
+          updateData[field] = data[field]
+        }
       }
     }
 
@@ -46,7 +61,6 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    // Update user
     const updatedUser = await db.user.update({
       where: { id: session.userId },
       data: updateData
