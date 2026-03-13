@@ -74,9 +74,23 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { name, description, code, language, isPublic } = body
 
-    if (!name || !code) {
+    if (!name || typeof name !== 'string' || name.trim().length < 2) {
       return NextResponse.json(
-        { error: 'Название и код алгоритма обязательны' },
+        { error: 'Название должно содержать минимум 2 символа' },
+        { status: 400 }
+      )
+    }
+
+    if (!code || typeof code !== 'string' || code.length < 10) {
+      return NextResponse.json(
+        { error: 'Код алгоритма слишком короткий' },
+        { status: 400 }
+      )
+    }
+
+    if (code.length > 100000) {
+      return NextResponse.json(
+        { error: 'Код алгоритма слишком длинный (макс. 100KB)' },
         { status: 400 }
       )
     }
