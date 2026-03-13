@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -37,11 +37,19 @@ export function UserProfile({ onLogout }: UserProfileProps) {
   const [group, setGroup] = useState(user?.group || '')
   const [isSaving, setIsSaving] = useState(false)
 
+  React.useEffect(() => {
+    if (user) {
+      setName(user.name || '')
+      setGroup(user.group || '')
+    }
+  }, [user])
+
   if (!user) return null
 
   const handleSave = async () => {
+    if (name.trim().length < 2) return
     setIsSaving(true)
-    await updateUser({ name, group })
+    await updateUser({ name: name.trim(), group })
     setIsEditing(false)
     setIsSaving(false)
   }
