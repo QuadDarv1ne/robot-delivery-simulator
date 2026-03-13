@@ -51,58 +51,133 @@ A comprehensive 3D robot delivery simulator with Unity WebGL integration, ROS/RO
 - **REST API** - Full CRUD operations
 - **ROS/ROS2 Ready** - External control system support
 - **Algorithm Testing** - Upload and test custom algorithms
+- **Code Editor** - Built-in editor for Python and JavaScript with syntax highlighting
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - npm or bun
 - SQLite (included)
 
-### Installation
+### 📋 Step-by-Step Installation Guide
+
+#### Step 1: Clone the Repository
 
 ```bash
-# Clone the repository
 git clone https://github.com/QuadDarv1ne/robot-delivery-simulator.git
 cd robot-delivery-simulator
-
-# Install dependencies
-npm install
-
-# Setup database
-npx prisma generate
-npx prisma db push
-
-# Create demo user
-npm run seed
-
-# Start development servers
-npm run dev
 ```
 
-### Running the Application
-
-The application consists of two servers:
+#### Step 2: Setup Environment Variables
 
 ```bash
-# Terminal 1: Main Next.js application (port 3000)
-npm run dev
-
-# Terminal 2: WebSocket server for sensor data (port 3003)
-npm run websocket
+# Copy the example environment file
+cp .env.example .env
 ```
 
-Or run both together:
+> **Important:** In the `.env` file, change `NEXTAUTH_SECRET` to a random string.  
+> For generation, use: `openssl rand -base64 32`
 
+#### Step 3: Install Dependencies
+
+```bash
+npm install
+```
+
+#### Step 4: Setup Database
+
+```bash
+# Generate Prisma client
+npx prisma generate
+
+# Create the database (apply schema)
+npx prisma db push
+```
+
+#### Step 5: Create Demo User
+
+```bash
+# Seed the database with test data
+npm run seed
+```
+
+#### Step 6: Run the Application
+
+**Option A — Single command (both servers):**
 ```bash
 npm run dev:all
 ```
 
-### Demo Credentials
+**Option B — In two separate terminals:**
 
-- **Email:** demo@test.ru
-- **Password:** demo123
+*Terminal 1 — Next.js application (port 3000):*
+```bash
+npm run dev
+```
+
+*Terminal 2 — WebSocket server (port 3003):*
+```bash
+npm run websocket
+```
+
+#### Step 7: Open in Browser
+
+Go to **http://localhost:3000**
+
+### 🔑 Demo Credentials
+
+| Field | Value |
+|-------|-------|
+| **Email** | `demo@test.ru` |
+| **Password** | `demo123` |
+
+### ⚠️ Troubleshooting
+
+**WebSocket connection error:**
+- Make sure the server on port 3003 is running
+- Check for port conflicts
+
+**Database error:**
+```bash
+# Remove old database and recreate
+rm prisma/dev.db
+npx prisma db push
+npm run seed
+```
+
+**Dependencies issues:**
+```bash
+# Clear cache and reinstall
+rm -rf node_modules package-lock.json
+npm install
+```
+
+## 🛠️ Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start Next.js app (port 3000) |
+| `npm run websocket` | Start WebSocket server (port 3003) |
+| `npm run dev:all` | Start both servers simultaneously |
+| `npm run build` | Build for production |
+| `npm run start` | Start production server |
+| `npm run lint` | Run linter |
+| `npm run lint:fix` | Fix linter errors |
+| `npm run type-check` | TypeScript type checking |
+| `npm run test` | Run unit tests |
+| `npm run test:watch` | Run tests in watch mode |
+| `npm run test:e2e` | Run Playwright e2e tests |
+| `npm run test:coverage` | Run tests with coverage |
+| `npm run db:push` | Apply database schema |
+| `npm run db:generate` | Generate Prisma client |
+| `npm run db:migrate` | Create database migration |
+| `npm run db:reset` | Reset database |
+| `npm run db:studio` | Open Prisma Studio |
+| `npm run seed` | Seed database with test data |
+| `npm run docker:build` | Build Docker image |
+| `npm run docker:run` | Run Docker container |
 
 ## 🏗️ Architecture
 

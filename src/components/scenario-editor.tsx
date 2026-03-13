@@ -39,7 +39,11 @@ import {
   Mountain,
   RefreshCw,
   CheckCircle2,
-  X
+  X,
+  Search,
+  Copy,
+  Filter,
+  Share2
 } from 'lucide-react'
 
 interface Point {
@@ -101,15 +105,28 @@ export function ScenarioEditor() {
   const [isSaving, setIsSaving] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [isNewScenario, setIsNewScenario] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchDifficulty, setSearchDifficulty] = useState('')
+  const [searchWeather, setSearchWeather] = useState('')
+  const [isCloning, setIsCloning] = useState(false)
 
   useEffect(() => {
     fetchScenarios()
   }, [])
 
-  const fetchScenarios = async () => {
+  const fetchScenarios = async (searchParams?: { query?: string; difficulty?: string; weather?: string }) => {
     setIsLoading(true)
     try {
-      const response = await fetch('/api/scenarios')
+      const params = new URLSearchParams()
+      if (searchParams?.query) params.set('q', searchParams.query)
+      if (searchParams?.difficulty) params.set('difficulty', searchParams.difficulty)
+      if (searchParams?.weather) params.set('weather', searchParams.weather)
+      
+      const url = searchParams?.query || searchParams?.difficulty || searchParams?.weather
+        ? `/api/scenarios/search?${params.toString()}`
+        : '/api/scenarios'
+      
+      const response = await fetch(url)
       if (response.ok) {
         const data = await response.json()
         setScenarios(data.scenarios || [])
@@ -192,6 +209,43 @@ export function ScenarioEditor() {
     }
   }
 
+  const handleClone = async (scenario: Scenario) => {
+    setIsCloning(true)
+    try {
+      const response = await fetch('/api/scenarios/clone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: scenario.id })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        await fetchScenarios()
+        // Edit the cloned scenario
+        handleEditScenario(data.scenario)
+      }
+    } catch (error) {
+      console.error('Failed to clone scenario:', error)
+    } finally {
+      setIsCloning(false)
+    }
+  }
+
+  const handleSearch = useCallback(() => {
+    fetchScenarios({
+      query: searchQuery || undefined,
+      difficulty: searchDifficulty || undefined,
+      weather: searchWeather || undefined
+    })
+  }, [searchQuery, searchDifficulty, searchWeather])
+
+  const handleClearSearch = () => {
+    setSearchQuery('')
+    setSearchDifficulty('')
+    setSearchWeather('')
+    fetchScenarios()
+  }
+
   const getDifficultyBadge = (difficulty: string) => {
     const colors = {
       easy: 'bg-green-500',
@@ -224,13 +278,61 @@ export function ScenarioEditor() {
               <MapPin className="w-4 h-4" />
               Сценарии доставки
             </CardTitle>
-            <Button variant="ghost" size="icon" onClick={handleNewScenario}>
-              <Plus className="w-4 h-4" />
-            </Button>
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" onClick={handleNewScenario}>
+                <Plus className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={handleClearSearch}>
+                <RefreshCw className="w-3.5 h-3.5" />
+              </Button>
+            </div>
           </div>
         </CardHeader>
+
+        {/* Search */}
+        <div className="p-3 border-t border-b space-y-2 bg-muted/30">
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Поиск..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              className="pl-8 h-9"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Select value={searchDifficulty} onValueChange={setSearchDifficulty}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Сложность" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Все</SelectItem>
+                <SelectItem value="easy">Лёгкий</SelectItem>
+                <SelectItem value="medium">Средний</SelectItem>
+                <SelectItem value="hard">Сложный</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={searchWeather} onValueChange={setSearchWeather}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Погода" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Все</SelectItem>
+                <SelectItem value="sunny">☀️</SelectItem>
+                <SelectItem value="rainy">🌧️</SelectItem>
+                <SelectItem value="snowy">❄️</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button size="sm" className="w-full" onClick={handleSearch}>
+            <Filter className="w-4 h-4 mr-1" />
+            Найти
+          </Button>
+        </div>
+
         <CardContent className="p-0">
-          <ScrollArea className="h-[calc(100vh-300px)]">
+          <ScrollArea className="h-[calc(100vh-400px)]">
             {isLoading ? (
               <div className="p-4 text-center text-muted-foreground">
                 <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2" />
@@ -238,7 +340,7 @@ export function ScenarioEditor() {
               </div>
             ) : scenarios.length === 0 ? (
               <div className="p-4 text-center text-muted-foreground text-sm">
-                Нет созданных сценариев
+                {searchQuery || searchDifficulty || searchWeather ? 'Ничего не найдено' : 'Нет созданных сценариев'}
               </div>
             ) : (
               <div className="divide-y">
@@ -250,6 +352,15 @@ export function ScenarioEditor() {
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium truncate">{scenario.name}</span>
                       <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => handleClone(scenario)}
+                          disabled={isCloning}
+                        >
+                          <Copy className="w-3 h-3" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"

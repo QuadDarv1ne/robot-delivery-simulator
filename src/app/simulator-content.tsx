@@ -47,6 +47,7 @@ import {
 import { AnalyticsPanel } from '@/components/analytics-panel'
 import { Leaderboard } from '@/components/leaderboard'
 import { AlgorithmEditor } from '@/components/algorithm-editor'
+import { ScenarioEditor } from '@/components/scenario-editor'
 import { User as UserType } from '@/lib/auth-context'
 
 // Dynamic imports
@@ -280,7 +281,7 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
 
   // WebSocket connection
   useEffect(() => {
-    const socket = io('/?XTransformPort=3003', {
+    const socket = io('http://localhost:3003', {
       path: '/',
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -447,11 +448,12 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
       <main className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           <div className="xl:col-span-3 space-y-6">
-            <Tabs value={activeView} onValueChange={(v) => setActiveView(v as 'simulator' | 'map' | 'lidar3d' | 'leaderboard' | 'algorithms')}>
-              <TabsList className="grid w-full grid-cols-5">
+            <Tabs value={activeView} onValueChange={(v) => setActiveView(v as 'simulator' | 'map' | 'lidar3d' | 'scenarios' | 'leaderboard' | 'algorithms')}>
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="simulator"><Activity className="w-4 h-4 mr-2" />Симулятор</TabsTrigger>
                 <TabsTrigger value="map"><MapPin className="w-4 h-4 mr-2" />Карта</TabsTrigger>
                 <TabsTrigger value="lidar3d"><Layers className="w-4 h-4 mr-2" />3D Lidar</TabsTrigger>
+                <TabsTrigger value="scenarios"><Package className="w-4 h-4 mr-2" />Сценарии</TabsTrigger>
                 <TabsTrigger value="leaderboard"><Trophy className="w-4 h-4 mr-2" />Рейтинг</TabsTrigger>
                 <TabsTrigger value="algorithms"><Code className="w-4 h-4 mr-2" />Алгоритмы</TabsTrigger>
               </TabsList>
@@ -545,7 +547,11 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
               <TabsContent value="leaderboard" className="mt-4">
                 <Leaderboard currentUserId={user?.id} />
               </TabsContent>
-              
+
+              <TabsContent value="scenarios" className="mt-4">
+                <ScenarioEditor />
+              </TabsContent>
+
               <TabsContent value="algorithms" className="mt-4">
                 <AlgorithmEditor />
               </TabsContent>

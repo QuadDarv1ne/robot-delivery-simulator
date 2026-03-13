@@ -51,6 +51,7 @@
 - **REST API** — Полные CRUD операции
 - **Готовность к ROS/ROS2** — Поддержка внешних систем управления
 - **Тестирование алгоритмов** — Загрузка и тестирование пользовательских алгоритмов
+- **Редактор кода** — Встроенный редактор для Python и JavaScript с подсветкой синтаксиса
 
 ## 🚀 Быстрый старт
 
@@ -60,49 +61,123 @@
 - npm или bun
 - SQLite (встроено)
 
-### Установка
+### 📋 Пошаговая инструкция по запуску
+
+#### Шаг 1: Клонирование репозитория
 
 ```bash
-# Клонировать репозиторий
 git clone https://github.com/QuadDarv1ne/robot-delivery-simulator.git
 cd robot-delivery-simulator
-
-# Установить зависимости
-npm install
-
-# Настроить базу данных
-npx prisma generate
-npx prisma db push
-
-# Создать демо-пользователя
-npm run seed
-
-# Запустить серверы разработки
-npm run dev
 ```
 
-### Запуск приложения
-
-Приложение состоит из двух серверов:
+#### Шаг 2: Настройка переменных окружения
 
 ```bash
-# Терминал 1: Основное приложение Next.js (порт 3000)
-npm run dev
-
-# Терминал 2: WebSocket сервер для данных сенсоров (порт 3003)
-npm run websocket
+# Скопируйте пример переменных окружения
+cp .env.example .env
 ```
 
-Или запустите оба вместе:
+> **Важно:** В файле `.env` измените `NEXTAUTH_SECRET` на случайную строку.  
+> Для генерации используйте: `openssl rand -base64 32`
 
+#### Шаг 3: Установка зависимостей
+
+```bash
+npm install
+```
+
+#### Шаг 4: Настройка базы данных
+
+```bash
+# Сгенерируйте Prisma клиент
+npx prisma generate
+
+# Создайте базу данных (примените схему)
+npx prisma db push
+```
+
+#### Шаг 5: Создание демо-пользователя
+
+```bash
+# Заполните базу тестовыми данными
+npm run seed
+```
+
+#### Шаг 6: Запуск приложения
+
+**Вариант A — Одна команда (оба сервера):**
 ```bash
 npm run dev:all
 ```
 
-### Демо-доступ
+**Вариант B — В двух терминалах отдельно:**
 
-- **Email:** demo@test.ru
-- **Пароль:** demo123
+*Терминал 1 — Next.js приложение (порт 3000):*
+```bash
+npm run dev
+```
+
+*Терминал 2 — WebSocket сервер (порт 3003):*
+```bash
+npm run websocket
+```
+
+#### Шаг 7: Открыть в браузере
+
+Перейдите на **http://localhost:3000**
+
+### 🔑 Демо-доступ
+
+| Поле | Значение |
+|------|----------|
+| **Email** | `demo@test.ru` |
+| **Пароль** | `demo123` |
+
+### ⚠️ Решение проблем
+
+**Ошибка подключения к WebSocket:**
+- Убедитесь, что сервер на порту 3003 запущен
+- Проверьте, нет ли конфликта портов
+
+**Ошибка базы данных:**
+```bash
+# Удалите старую БД и создайте заново
+rm prisma/dev.db
+npx prisma db push
+npm run seed
+```
+
+**Проблемы с зависимостями:**
+```bash
+# Очистите кэш и переустановите
+rm -rf node_modules package-lock.json
+npm install
+```
+
+## 🛠️ Доступные команды
+
+| Команда | Описание |
+|---------|----------|
+| `npm run dev` | Запуск Next.js приложения (порт 3000) |
+| `npm run websocket` | Запуск WebSocket сервера (порт 3003) |
+| `npm run dev:all` | Запуск обоих серверов одновременно |
+| `npm run build` | Сборка для продакшена |
+| `npm run start` | Запуск продакшен-сервера |
+| `npm run lint` | Проверка кода линтером |
+| `npm run lint:fix` | Исправление ошибок линтера |
+| `npm run type-check` | Проверка типов TypeScript |
+| `npm run test` | Запуск unit-тестов |
+| `npm run test:watch` | Тесты в режиме наблюдения |
+| `npm run test:e2e` | Запуск e2e тестов Playwright |
+| `npm run test:coverage` | Тесты с покрытием кода |
+| `npm run db:push` | Применить схему БД |
+| `npm run db:generate` | Генерация Prisma клиента |
+| `npm run db:migrate` | Создание миграции БД |
+| `npm run db:reset` | Сброс базы данных |
+| `npm run db:studio` | Открыть Prisma Studio |
+| `npm run seed` | Заполнение БД тестовыми данными |
+| `npm run docker:build` | Сборка Docker образа |
+| `npm run docker:run` | Запуск Docker контейнера |
 
 ## 🏗️ Архитектура
 
@@ -194,6 +269,10 @@ UNITY_WEBGL_URL="http://localhost:8080"
 
 ## 🌐 API Справочник
 
+Полная документация API доступна в файле [docs/API.md](./docs/API.md).
+
+Примеры использования с кодом на JavaScript и Python: [docs/API-EXAMPLES.md](./docs/API-EXAMPLES.md).
+
 ### Авторизация
 
 ```http
@@ -209,6 +288,19 @@ POST /api/auth/reset-password  # Сброс пароля
 ```http
 GET  /api/user/me             # Текущий пользователь
 PATCH /api/user/profile       # Обновить профиль
+```
+
+### Алгоритмы
+
+```http
+GET  /api/algorithms          # Список алгоритмов
+GET  /api/algorithms?id={id}  # Алгоритм по ID
+POST /api/algorithms          # Создать алгоритм
+PUT  /api/algorithms          # Обновить алгоритм
+DELETE /api/algorithms?id={id}# Удалить алгоритм
+POST /api/algorithms/clone    # Клонировать алгоритм
+GET  /api/algorithms/search   # Поиск алгоритмов
+POST /api/algorithms/run      # Запуск симуляции
 ```
 
 ### Админ-эндпоинты

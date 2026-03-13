@@ -1,62 +1,145 @@
-# Changelog
+# 📝 Changelog
 
-All notable changes to this project will be documented in this file.
+Все заметные изменения в проекте.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [1.1.0] - 13 марта 2026
 
-## [Unreleased]
+### ✨ Новое
 
-### Added
-- Testing infrastructure with Jest and Playwright
-  - Jest configuration (`jest.config.ts`) with ts-jest preset
-  - Playwright E2E testing configuration (`playwright.config.ts`)
-  - Unit tests for utility functions (`tests/utils.test.ts`)
-  - API endpoint tests (`tests/api.test.ts`)
-  - Component tests (`tests/components.test.ts`)
-  - E2E smoke tests (`tests-e2e/smoke.test.ts`)
-- Test coverage reporting with Codecov integration
-- New npm scripts: `test:coverage` for coverage reports
-- Testing dependencies:
-  - `jest`, `ts-jest`, `@types/jest`
-  - `@testing-library/react`, `@testing-library/jest-dom`
-  - `@playwright/test`
-  - `identity-obj-proxy` for CSS module mocking
-- CI/CD improvements:
-  - Updated test job to run with coverage
-  - Added Prisma generation step before tests
-  - Added Codecov upload step
+#### UI Компоненты
+- **Поиск алгоритмов** — Добавлена панель поиска с фильтрами по названию и языку
+- **Клонирование алгоритмов** — Кнопка быстрого клонирования для создания копий алгоритмов
+- **Вкладка "Сценарии"** — Новая вкладка в главном интерфейсе симулятора
+- **Поиск сценариев** — Фильтрация по названию, сложности и погоде
+- **Клонирование сценариев** — Быстрое создание копий сценариев
 
-### Changed
-- Updated `.github/workflows/ci.yml` to run tests with coverage
-- Enhanced test job to include Prisma client generation
+#### API Эндпоинты
+- `GET /api/algorithms/search` — Поиск алгоритмов с пагинацией
+- `GET /api/algorithms/[id]` — Получение алгоритма по ID с историей запусков
+- `POST /api/algorithms/clone` — Клонирование алгоритма
+- `GET /api/scenarios/search` — Поиск сценариев с фильтрами
+- `POST /api/scenarios/clone` — Клонирование сценария
 
-### Fixed
-- Removed `package-lock.json` from repository (now in `.gitignore`)
+#### Документация
+- `docs/API.md` — Полная документация всех API эндпоинтов
+- `docs/API-EXAMPLES.md` — Примеры кода на cURL, JavaScript, Python
+- `docs/DEVELOPMENT-TIPS.md` — Советы по разработке и отладке
+- `CHANGELOG.md` — История изменений проекта
 
-### Technical
-- All tests passing (11 unit tests)
-- Lint and type-check passing
-- Build successful with no errors
+### 🔧 Улучшения
 
-## [1.0.0] - 2024-01-01
+#### Algorithm Editor
+- Добавлена панель поиска с фильтрами (название, язык)
+- Добавлена кнопка сброса поиска
+- Добавлена кнопка клонирования для каждого алгоритма
+- Улучшена адаптивность toolbar — кнопки переносятся на новую строку
+- Статус "Ничего не найдено" при пустых результатах поиска
 
-### Added
-- Initial release
-- Basic robot simulation interface
-- GPS, Lidar, IMU, Encoder sensor panels
-- Real-time data visualization
-- User authentication with NextAuth.js
-- Role-based access control (student/teacher/admin)
-- SQLite database with Prisma ORM
-- Docker support
-- Vercel/Netlify deployment configurations
+#### Scenario Editor
+- Добавлена панель поиска с фильтрами (название, сложность, погода)
+- Добавлена кнопка клонирования для каждого сценария
+- Добавлена кнопка сброса фильтров
+- Улучшена компоновка элементов управления
 
-### Security
-- Password hashing with bcrypt
-- Session-based authentication
-- CSRF protection
-- Input validation
+#### Simulator Content
+- Добавлена новая вкладка "Сценарии" в главное меню
+- Интегрирован компонент ScenarioEditor
+- Обновлена навигация между вкладками
 
-[Unreleased]: https://github.com/QuadDarv1ne/robot-delivery-simulator/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/QuadDarv1ne/robot-delivery-simulator/releases/tag/v1.0.0
+### 📚 Документация
+
+#### Обновления README.md
+- Добавлена таблица доступных npm команд (21 команда)
+- Расширена секция API с новыми эндпоинтами
+- Добавлены ссылки на новую документацию
+- Улучшена структура и читаемость
+
+#### Обновления README.en.md
+- Добавлена таблица available commands
+- Расширена API секция
+- Добавлены troubleshooting советы
+
+### 🐛 Исправления
+
+#### Algorithm Editor
+- **Исправлен баг** — кнопки toolbar больше не выходят за пределы контейнера
+- **Исправлен баг** — некорректное отображение при малой ширине экрана
+
+### 🔒 Безопасность
+
+- Все новые API эндпоинты требуют аутентификации
+- Проверка прав доступа для операций клонирования
+- Валидация входных данных на сервере
+
+### 📦 Технические изменения
+
+#### Новые зависимости
+- `lucide-react` — новые иконки: Search, Copy, Filter, Share2
+
+#### Изменения в файлах
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── algorithms/
+│   │   │   ├── [id]/route.ts          ← Новый
+│   │   │   ├── clone/route.ts         ← Новый
+│   │   │   └── search/route.ts        ← Новый
+│   │   └── scenarios/
+│   │       ├── clone/route.ts         ← Новый
+│   │       └── search/route.ts        ← Новый
+│   └── simulator-content.tsx          ← Обновлён
+├── components/
+│   ├── algorithm-editor.tsx           ← Обновлён
+│   └── scenario-editor.tsx            ← Обновлён
+docs/
+├── API.md                             ← Новый
+├── API-EXAMPLES.md                    ← Новый
+├── DEVELOPMENT-TIPS.md                ← Новый
+└── CHANGELOG.md                       ← Новый
+```
+
+### 🎯 Примеры использования
+
+#### Поиск алгоритмов
+```javascript
+// GET /api/algorithms/search?q=навигация&language=python
+const response = await fetch('/api/algorithms/search?q=навигация&language=python');
+const data = await response.json();
+```
+
+#### Клонирование алгоритма
+```javascript
+// POST /api/algorithms/clone
+const response = await fetch('/api/algorithms/clone', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ id: 'algo-id' })
+});
+```
+
+#### Поиск сценариев
+```javascript
+// GET /api/scenarios/search?difficulty=medium&weather=sunny
+const response = await fetch('/api/scenarios/search?difficulty=medium&weather=sunny');
+const data = await response.json();
+```
+
+---
+
+## [1.0.0] - 1 марта 2026
+
+### ✨ Начальный релиз
+
+- Базовая функциональность симулятора
+- Редактор алгоритмов (Python/JavaScript)
+- Редактор сценариев
+- Интеграция с WebSocket для данных сенсоров
+- Система авторизации и ролей
+- Рейтинг пользователей
+- Аналитика и статистика
+
+---
+
+**Формат:** Проект следует [Semantic Versioning](https://semver.org/lang/ru/)
+**Стиль:** На основе [Keep a Changelog](https://keepachangelog.com/ru/1.0.0/)
