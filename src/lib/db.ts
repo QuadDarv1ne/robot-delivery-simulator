@@ -15,7 +15,9 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
 export async function connectDatabase(): Promise<void> {
   try {
     await db.$connect()
-    console.log('Database connected successfully')
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Database connected successfully')
+    }
   } catch (error) {
     console.error('Database connection failed:', error)
     throw error
@@ -25,7 +27,6 @@ export async function connectDatabase(): Promise<void> {
 export async function disconnectDatabase(): Promise<void> {
   try {
     await db.$disconnect()
-    console.log('Database disconnected')
   } catch (error) {
     console.error('Database disconnection failed:', error)
   }

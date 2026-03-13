@@ -137,7 +137,9 @@ export const authOptions: NextAuthOptions = {
   },
   events: {
     async signIn({ user }) {
-      console.log(`User signed in: ${user.email}`)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`User signed in: ${user.email}`)
+      }
     }
   },
   secret: process.env.NEXTAUTH_SECRET || "robot-simulator-secret-key-2024"
