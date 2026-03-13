@@ -48,10 +48,10 @@ export const scenarioCreateSchema = z.object({
   traffic: z.enum(['low', 'medium', 'high']).default('low'),
   startPoint: z.string(),
   endPoint: z.string(),
-  waypoints: z.union([z.string(), z.array(z.any())]).transform(val => 
+  waypoints: z.union([z.string(), z.array(z.any())]).transform(val =>
     typeof val === 'string' ? val : JSON.stringify(val)
   ).default('[]'),
-  obstacles: z.union([z.string(), z.array(z.any())]).transform(val => 
+  obstacles: z.union([z.string(), z.array(z.any())]).transform(val =>
     typeof val === 'string' ? val : JSON.stringify(val)
   ).default('[]'),
   isPublic: z.boolean().default(true)
@@ -68,10 +68,10 @@ export const scenarioUpdateSchema = z.object({
   traffic: z.enum(['low', 'medium', 'high']).optional(),
   startPoint: z.string().optional(),
   endPoint: z.string().optional(),
-  waypoints: z.union([z.string(), z.array(z.any())]).transform(val => 
+  waypoints: z.union([z.string(), z.array(z.any())]).transform(val =>
     typeof val === 'string' ? val : JSON.stringify(val)
   ).optional(),
-  obstacles: z.union([z.string(), z.array(z.any())]).transform(val => 
+  obstacles: z.union([z.string(), z.array(z.any())]).transform(val =>
     typeof val === 'string' ? val : JSON.stringify(val)
   ).optional(),
   isPublic: z.boolean().optional()

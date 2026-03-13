@@ -16,6 +16,12 @@
 - Документация (docs/API.md, docs/API-EXAMPLES.md, docs/DEVELOPMENT-TIPS.md)
 - Изображение релиза (img/2026-03-13-v1.png)
 - Сборка проходит успешно
+- Zod валидация для всех API endpoints
+- Toast уведомления для UX
+- Пагинация на клиенте (алгоритмы, сценарии)
+- Сортировка результатов поиска
+- Debouncing для поиска
+- WebSocket error handling
 
 ### 🔄 В работе
 - Синхронизация dev и main завершена (коммит `0097e6b`)
