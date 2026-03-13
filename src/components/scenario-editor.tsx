@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -109,6 +109,7 @@ export function ScenarioEditor() {
   const [searchDifficulty, setSearchDifficulty] = useState('')
   const [searchWeather, setSearchWeather] = useState('')
   const [isCloning, setIsCloning] = useState(false)
+  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     fetchScenarios()
@@ -121,22 +122,36 @@ export function ScenarioEditor() {
       if (searchParams?.query) params.set('q', searchParams.query)
       if (searchParams?.difficulty) params.set('difficulty', searchParams.difficulty)
       if (searchParams?.weather) params.set('weather', searchParams.weather)
-      
+
       const url = searchParams?.query || searchParams?.difficulty || searchParams?.weather
         ? `/api/scenarios/search?${params.toString()}`
         : '/api/scenarios'
-      
+
       const response = await fetch(url)
-      if (response.ok) {
-        const data = await response.json()
-        setScenarios(data.scenarios || [])
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
+      const data = await response.json()
+      setScenarios(data.scenarios || [])
     } catch (error) {
       console.error('Failed to fetch scenarios:', error)
     } finally {
       setIsLoading(false)
     }
   }
+
+  const handleSearch = useCallback(() => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current)
+    }
+    searchDebounceRef.current = setTimeout(() => {
+      fetchScenarios({
+        query: searchQuery || undefined,
+        difficulty: searchDifficulty || undefined,
+        weather: searchWeather || undefined
+      })
+    }, 300)
+  }, [searchQuery, searchDifficulty, searchWeather])
 
   const handleNewScenario = () => {
     setSelectedScenario(null)
@@ -230,14 +245,6 @@ export function ScenarioEditor() {
       setIsCloning(false)
     }
   }
-
-  const handleSearch = useCallback(() => {
-    fetchScenarios({
-      query: searchQuery || undefined,
-      difficulty: searchDifficulty || undefined,
-      weather: searchWeather || undefined
-    })
-  }, [searchQuery, searchDifficulty, searchWeather])
 
   const handleClearSearch = () => {
     setSearchQuery('')

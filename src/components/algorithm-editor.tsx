@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -186,6 +186,7 @@ export function AlgorithmEditor() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchLanguage, setSearchLanguage] = useState('')
   const [isCloning, setIsCloning] = useState(false)
+  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null)
 
   const fetchAlgorithms = useCallback(async (searchParams?: { query?: string; language?: string }) => {
     setIsLoading(true)
@@ -193,16 +194,17 @@ export function AlgorithmEditor() {
       const params = new URLSearchParams()
       if (searchParams?.query) params.set('q', searchParams.query)
       if (searchParams?.language) params.set('language', searchParams.language)
-      
+
       const url = searchParams?.query || searchParams?.language
         ? `/api/algorithms/search?${params.toString()}`
         : '/api/algorithms'
-      
+
       const response = await fetch(url)
-      if (response.ok) {
-        const data = await response.json()
-        setAlgorithms(data.algorithms || [])
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
+      const data = await response.json()
+      setAlgorithms(data.algorithms || [])
     } catch (error) {
       console.error('Failed to fetch algorithms:', error)
     } finally {
@@ -213,6 +215,18 @@ export function AlgorithmEditor() {
   useEffect(() => {
     fetchAlgorithms()
   }, [fetchAlgorithms])
+
+  const handleSearch = useCallback(() => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current)
+    }
+    searchDebounceRef.current = setTimeout(() => {
+      fetchAlgorithms({
+        query: searchQuery || undefined,
+        language: searchLanguage || undefined
+      })
+    }, 300)
+  }, [searchQuery, searchLanguage, fetchAlgorithms])
 
   const handleNewAlgorithm = () => {
     setSelectedAlgorithm(null)
@@ -380,13 +394,6 @@ export function AlgorithmEditor() {
       setIsCloning(false)
     }
   }
-
-  const handleSearch = useCallback(() => {
-    fetchAlgorithms({
-      query: searchQuery || undefined,
-      language: searchLanguage || undefined
-    })
-  }, [searchQuery, searchLanguage, fetchAlgorithms])
 
   const handleClearSearch = () => {
     setSearchQuery('')
