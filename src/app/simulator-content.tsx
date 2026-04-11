@@ -41,19 +41,24 @@ import {
   Trophy,
   Forward,
   RotateCw,
-  RotateCcw as RotateLeft
+  RotateCcw as RotateLeft,
+  Radio
 } from 'lucide-react'
-import { 
-  DeliveryScenario, 
-  DeliverySession, 
-  ScenarioSelector, 
+import {
+  DeliveryScenario,
+  DeliverySession,
+  ScenarioSelector,
   DeliveryProgress
 } from '@/components/delivery-scenarios'
 import { AnalyticsPanel } from '@/components/analytics-panel'
 import { Leaderboard } from '@/components/leaderboard'
 import { AlgorithmEditor } from '@/components/algorithm-editor'
 import { ScenarioEditor } from '@/components/scenario-editor'
+import { SDRPanel } from '@/components/sdr/sdr-panel'
+import { GeoAnalyticsPanel } from '@/components/sdr/geoanalytics'
+import { SDRNavigationPanel } from '@/components/sdr/sdr-navigation'
 import { User as UserType } from '@/lib/auth-context'
+import type { SDRData, SDRContact, SDRStats } from '@/components/sdr/types'
 
 // Dynamic imports
 const RobotMap = dynamic(
@@ -272,7 +277,8 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
   
   const [selectedScenario, setSelectedScenario] = useState<DeliveryScenario | null>(null)
   const [deliverySession, setDeliverySession] = useState<DeliverySession | null>(null)
-  const [activeView, setActiveView] = useState<'simulator' | 'map' | 'lidar3d' | 'scenarios' | 'leaderboard' | 'algorithms'>('simulator')
+  const [activeView, setActiveView] = useState<'simulator' | 'map' | 'lidar3d' | 'scenarios' | 'leaderboard' | 'algorithms' | 'sdr' | 'geoanalytics'>('simulator')
+  const [sdrData, setSDRData] = useState<SDRData | null>(null)
   
   const socketRef = useRef<Socket | null>(null)
 
@@ -342,6 +348,11 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
       toast.error(`Столкновение с препятствием ${data.obstacleId}`)
     })
 
+    // SDR data events
+    socket.on('sdr-data', (data: SDRData) => {
+      setSDRData(data)
+    })
+
     return () => {
       console.log('[WebSocket] Cleaning up connection')
       socket.off('connect', handleConnect)
@@ -354,6 +365,7 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
       socket.off('location')
       socket.off('obstacles-update')
       socket.off('collision')
+      socket.off('sdr-data')
       socket.disconnect()
       socketRef.current = null
     }
@@ -518,14 +530,16 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
       <main className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           <div className="xl:col-span-3 space-y-6">
-            <Tabs value={activeView} onValueChange={(v) => setActiveView(v as 'simulator' | 'map' | 'lidar3d' | 'scenarios' | 'leaderboard' | 'algorithms')}>
-              <TabsList className="grid w-full grid-cols-6">
+            <Tabs value={activeView} onValueChange={(v) => setActiveView(v as 'simulator' | 'map' | 'lidar3d' | 'scenarios' | 'leaderboard' | 'algorithms' | 'sdr' | 'geoanalytics')}>
+              <TabsList className="grid w-full grid-cols-8">
                 <TabsTrigger value="simulator"><Activity className="w-4 h-4 mr-2" />Симулятор</TabsTrigger>
                 <TabsTrigger value="map"><MapPin className="w-4 h-4 mr-2" />Карта</TabsTrigger>
                 <TabsTrigger value="lidar3d"><Layers className="w-4 h-4 mr-2" />3D Lidar</TabsTrigger>
                 <TabsTrigger value="scenarios"><Package className="w-4 h-4 mr-2" />Сценарии</TabsTrigger>
                 <TabsTrigger value="leaderboard"><Trophy className="w-4 h-4 mr-2" />Рейтинг</TabsTrigger>
                 <TabsTrigger value="algorithms"><Code className="w-4 h-4 mr-2" />Алгоритмы</TabsTrigger>
+                <TabsTrigger value="sdr"><Radio className="w-4 h-4 mr-2" />SDR</TabsTrigger>
+                <TabsTrigger value="geoanalytics"><MapPin className="w-4 h-4 mr-2" />Геоаналитика</TabsTrigger>
               </TabsList>
               
               <TabsContent value="simulator" className="mt-4">
@@ -664,6 +678,29 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
               <TabsContent value="algorithms" className="mt-4">
                 <AlgorithmEditor />
               </TabsContent>
+
+              <TabsContent value="sdr" className="mt-4">
+                <SDRPanel />
+              </TabsContent>
+
+              <TabsContent value="geoanalytics" className="mt-4">
+                {sdrData ? (
+                  <GeoAnalyticsPanel 
+                    contacts={sdrData.contacts} 
+                    stats={sdrData.stats}
+                    contactHistory={sdrData.contactHistory || {}}
+                    robotPosition={sensorData?.gps}
+                  />
+                ) : (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="h-[500px] flex items-center justify-center">
+                        <span className="text-muted-foreground">Загрузка данных геоаналитики...</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
             </Tabs>
             
             <Card>
@@ -799,11 +836,41 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
                 </div>
               </CardContent>
             </Card>
+
+            {/* SDR Navigation Panel */}
+            {sensorData?.gps && (
+              <SDRNavigationPanel robotPosition={sensorData.gps} />
+            )}
           </div>
         </div>
       </main>
-      
-      <footer className="border-t mt-8">
+
+      {/* SDR Status Footer */}
+      {sdrData && (
+        <div className="border-t bg-card/30 backdrop-blur-sm">
+          <div className="container mx-auto px-4 py-2">
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-4">
+                <span className="flex items-center gap-1">
+                  <Radio className="w-3 h-3" />
+                  SDR: {sdrData.state?.enabled ? 'Online' : 'Offline'}
+                </span>
+                <span className="text-muted-foreground">
+                  {sdrData.state ? (sdrData.state.centerFrequency / 1e6).toFixed(2) : '—'} MHz
+                </span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-blue-500">ADS-B: {sdrData.stats?.adsBCount || 0}</span>
+                <span className="text-cyan-500">AIS: {sdrData.stats?.aisCount || 0}</span>
+                <span className="text-green-500">APRS: {sdrData.stats?.aprsCount || 0}</span>
+                <span className="text-muted-foreground">Всего: {sdrData.contacts.length}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <footer className="border-t">
         <div className="container mx-auto px-4 py-4 text-center text-xs text-muted-foreground">
           Robot Delivery Simulator • Unity WebGL + ROS/ROS2 Integration • OpenStreetMap • Three.js
         </div>

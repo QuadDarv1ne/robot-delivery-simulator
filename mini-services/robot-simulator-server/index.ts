@@ -1,5 +1,6 @@
 import { createServer, IncomingMessage, ServerResponse } from 'http'
 import { Server } from 'socket.io'
+import { io as ioClient, Socket as IOClientSocket } from 'socket.io-client'
 
 const LOG_PREFIX = '[RobotSimulator]'
 
@@ -57,7 +58,7 @@ interface SensorData {
 }
 
 interface ControlCommand {
-  type: 'move' | 'stop' | 'setSpeed' | 'setDestination' | 'getBattery' | 'getLocation' | 'resetPosition' | 'getSensors' | 'setSensors' | 'addObstacle' | 'removeObstacle' | 'clearObstacles'
+  type: 'move' | 'stop' | 'setSpeed' | 'setDestination' | 'getBattery' | 'getLocation' | 'resetPosition' | 'getSensors' | 'setSensors' | 'addObstacle' | 'removeObstacle' | 'clearObstacles' | 'sdrCommand'
   data: Record<string, unknown>
 }
 
@@ -162,6 +163,79 @@ function updateRobotState() {
 // Store connected clients
 const clients = new Map<string, { id: string; type: 'simulator' | 'controller' | 'viewer' }>()
 
+// SDR Server connection
+let sdrSocket: IOClientSocket | null = null
+let sdrContacts: Array<{
+  id: string
+  lat: number
+  lon: number
+  type: 'ads-b' | 'ais' | 'aprs'
+  rssi: number
+  timestamp: number
+  [key: string]: unknown
+}> = []
+
+let sdrSpectrumData: {
+  frequencies: number[]
+  amplitudes: number[]
+  timestamp: number
+  centerFrequency: number
+  sampleRate: number
+} | null = null
+
+let sdrStats: {
+  totalDetections: number
+  adsBCount: number
+  aisCount: number
+  aprsCount: number
+  peakFrequency: number
+  averageRSSI: number
+} | null = null
+
+let sdrState: {
+  enabled: boolean
+  mode: string
+  centerFrequency: number
+  sampleRate: number
+  gain: number
+} | null = null
+
+function connectToSDRServer() {
+  const SDR_SERVER_URL = process.env.SDR_SERVER_URL || 'http://localhost:3004'
+  
+  sdrSocket = ioClient(SDR_SERVER_URL, {
+    path: '/',
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 2000
+  })
+
+  sdrSocket.on('connect', () => {
+    log('info', `Connected to SDR server at ${SDR_SERVER_URL}`)
+  })
+
+  sdrSocket.on('sdr-data', (data: any) => {
+    sdrContacts = data.contacts || []
+    sdrSpectrumData = data.spectrumData || null
+    sdrStats = data.stats || null
+    sdrState = data.state || null
+    // Forward SDR data to all connected clients
+    io.emit('sdr-data', data)
+  })
+
+  sdrSocket.on('disconnect', () => {
+    log('warn', 'Disconnected from SDR server')
+  })
+
+  sdrSocket.on('connect_error', (error: Error) => {
+    log('error', `Error connecting to SDR server: ${error.message}`)
+  })
+}
+
+// Connect to SDR server on startup
+connectToSDRServer()
+
 // Broadcast sensor data periodically
 const broadcastInterval = setInterval(() => {
   try {
@@ -261,6 +335,16 @@ io.on('connection', (socket) => {
           io.emit('obstacles-update', { obstacles: [] })
           log('info', 'All obstacles cleared')
           break
+
+        // SDR commands
+        case 'sdrCommand':
+          if (sdrSocket && sdrSocket.connected) {
+            sdrSocket.emit('sdr-command', command.data)
+            log('info', 'SDR command forwarded', command.data)
+          } else {
+            log('warn', 'SDR server not connected')
+          }
+          break
         default:
           log('warn', `Unknown control command type: ${command.type}`)
       }
@@ -343,6 +427,12 @@ function gracefulShutdown(signal: string) {
   // Clear broadcast interval
   if (broadcastInterval) {
     clearInterval(broadcastInterval)
+  }
+
+  // Disconnect from SDR server
+  if (sdrSocket) {
+    sdrSocket.disconnect()
+    log('info', 'Disconnected from SDR server')
   }
 
   // Disconnect all clients

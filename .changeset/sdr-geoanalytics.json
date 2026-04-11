@@ -1,0 +1,43 @@
+{
+  "name": "SDR Geoanalytics Enhancement",
+  "description": "Добавление RTL-SDR геоаналитики в Robot Delivery Simulator",
+  "changes": {
+    "new_files": [
+      "mini-services/sdr-server/index.ts - SDR WebSocket сервер (порт 3004)",
+      "src/components/sdr/types.ts - Типы данных SDR",
+      "src/components/sdr/sdr-panel.tsx - SDR панель со спектральным анализатором",
+      "src/components/sdr/geoanalytics.tsx - Карта с маркерами SDR-объектов",
+      "src/components/sdr/heatmap-layer.tsx - Heatmap слой для Leaflet",
+      "docs/SDR-GEOANALYTICS.md - Документация"
+    ],
+    "modified_files": [
+      "mini-services/robot-simulator-server/index.ts - Интеграция с SDR сервером",
+      "src/app/simulator-content.tsx - Добавлены вкладки SDR и Геоаналитика",
+      "package.json - Добавлен скрипт npm run sdr"
+    ],
+    "new_dependencies": [
+      "socket.io - WebSocket сервер",
+      "leaflet.heat - Heatmap визуализация"
+    ],
+    "new_scripts": [
+      "npm run sdr - Запуск SDR сервера",
+      "npm run dev:all - Обновлён для запуска всех 3 сервисов"
+    ]
+  },
+  "features": [
+    "SDR сервер с эмуляцией ADS-B, AIS, APRS сигналов",
+    "Спектральный анализатор с waterfall-диаграммой",
+    "Карта с маркерами обнаруженных объектов",
+    "Heatmap плотности сигналов",
+    "Статистика обнаружений по типам",
+    "Управление параметрами SDR (режим, частота, усиление)",
+    "Интеграция с основным WebSocket сервером",
+    "Статус SDR в боковой панели и статус-баре"
+  ],
+  "ports": {
+    "3000": "Next.js фронтенд",
+    "3003": "Основной WebSocket сервер",
+    "3004": "SDR сервер (новый)"
+  },
+  "usage": "npm run dev:all"
+}
