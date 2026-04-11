@@ -1,95 +1,75 @@
-# TODO - Robot Delivery Simulator
+# Roadmap — RTL-SDR Geoanalytics
 
-## Текущее состояние (13 марта 2026)
+## Текущее состояние
 
-### ✅ Завершено
-- Поиск алгоритмов по названию и языку (Python/JavaScript)
-- Клонирование алгоритмов
-- Поиск сценариев с фильтрами (сложность, погода)
-- Клонирование сценариев
-- API endpoints:
-  - `GET /api/algorithms/search` — поиск алгоритмов
-  - `GET /api/algorithms/[id]` — получение алгоритма по ID
-  - `POST /api/algorithms/clone` — клонирование алгоритма
-  - `GET /api/scenarios/search` — поиск сценариев
-  - `POST /api/scenarios/clone` — клонирование сценария
-  - `GET /api/scenarios/[id]` — получение сценария по ID
-  - `GET /api/algorithms/favorite` — список избранного
-  - `POST /api/algorithms/favorite` — добавить в избранное
-  - `DELETE /api/algorithms/favorite` — удалить из избранного
-  - `GET /api/algorithms/history` — история запусков
-  - `GET /api/algorithms/run` — запуск симуляции с деталями (батарея, скорость)
-- Документация (docs/API.md, docs/API-EXAMPLES.md, docs/DEVELOPMENT-TIPS.md)
-- Изображение релиза (img/2026-03-13-v1.png)
-- Сборка проходит успешно
-- Zod валидация для всех API endpoints
-- Toast уведомления для UX
-- Пагинация на клиенте (алгоритмы, сценарии)
-- Сортировка результатов поиска
-- Debouncing для поиска
-- WebSocket error handling
-- Тесты для API endpoints (Jest)
-- Подсветка синтаксиса в редакторах алгоритмов (react-syntax-highlighter)
-- Редактор маршрута для сценариев (точки маршрута)
-- Панель ручного управления роботом (вперёд/назад/повороты)
-- Централизованное логирование (logger.ts, api-error.ts)
-- Утилиты форматирования (format.ts)
-- React hooks (useDebounce, useLocalStorage, useMediaQuery, useOnlineStatus)
-- Улучшена обработка ошибок в auth-context
-- Тесты для кастомных хуков (useDebounce, useLocalStorage, useOnlineStatus)
-- Тесты для API endpoints клонирования
-- WebSocket команды для симулятора:
-  - getBattery, getLocation, resetPosition
-  - getSensors, setSensors
-  - addObstacle, removeObstacle, clearObstacles
-  - Collision detection с препятствиями
-- Monaco Editor с автодополнением кода (Python/JavaScript)
-- Оптимизация сборки (turbopack, chunk splitting)
-
-### 🔄 В работе
-
-### 📋 План работ
-
-#### Улучшения
-- [ ] Продолжить оптимизацию размера сборки
+| Компонент | Статус |
+|-----------|--------|
+| SDR сервер (эмуляция) | ✅ Готово |
+| SDR панель (спектр, waterfall) | ✅ Готово |
+| Геоаналитика (карта, heatmap) | ✅ Готово |
+| Навигация (предупреждения) | ✅ Готово |
+| TypeScript компиляция | ✅ Без ошибок |
 
 ---
 
-## Правила проекта
-1. Не создавать документацию без запроса — только код и исправления
-2. Дело не в количестве, а в качестве
-3. Улучшать в dev → проверять → отправлять в main
-4. Всегда синхронизировать изменения между ветками
+## Этап 1: Оптимизация и стабилизация
 
-## Команды
-```bash
-# Запуск разработки
-npm run dev
+**Приоритет:** 🔴 Высокий  
+**Сложность:** ⚡ Средняя
 
-# Сборка
-npm run build
+- [ ] Оптимизация Canvas рендеринга спектра (requestAnimationFrame, throttling)
+- [ ] Оптимизация waterfall-диаграммы (ограничение буфера, WebGL при необходимости)
+- [ ] Уменьшение трафика WebSocket (отправка дельт вместо полных данных)
 
-# Тесты
-npm test
+## Этап 2: Backend и хранение данных
 
-# Линтинг
-npm run lint
-```
+**Приоритет:** 🔴 Высокий  
+**Сложность:** 🟢 Низкая
 
-## Структура API
-```
-/api/algorithms
-  ├── route.ts (GET, POST)
-  ├── run/route.ts (POST)
-  ├── search/route.ts (GET)
-  ├── clone/route.ts (POST)
-  ├── [id]/route.ts (GET)
-  ├── favorite/route.ts (GET, POST, DELETE)
-  └── history/route.ts (GET)
+- [ ] Prisma модель `sdr_detection` (тип, координаты, RSSI, timestamp, позывной)
+- [ ] `GET /api/sdr/history` — история обнаружений
+- [ ] `GET /api/sdr/stats` — статистика за период
+- [ ] `GET /api/sdr/heatmap` — данные для heatmap
+- [ ] Автосохранение обнаружений каждые 30 секунд
 
-/api/scenarios
-  ├── route.ts (GET, POST, PUT, DELETE)
-  ├── search/route.ts (GET)
-  ├── clone/route.ts (POST)
-  └── [id]/route.ts (GET)
-```
+## Этап 3: Интеграция с доставкой
+
+**Приоритет:** 🟡 Средний  
+**Сложность:** 🔴 Высокая
+
+- [ ] SDR-помехи как фактор в сценариях доставки
+- [ ] Алгоритм обхода помех на основе SDR-данных
+- [ ] Оценка качества связи (RSSI как индикатор радиошума)
+- [ ] Новые метрики: `sdrInterferenceScore`, `signalQuality`
+
+## Этап 4: Тесты
+
+**Приоритет:** 🟡 Средний  
+**Сложность:** ⚡ Средняя
+
+- [ ] Unit-тесты SDR генераторов данных
+- [ ] Тесты хука `useSDRForNavigation`
+- [ ] Интеграционные тесты WebSocket коммуникации
+- [ ] E2E тесты вкладок SDR и Геоаналитика
+
+## Этап 5: Подключение реального RTL-SDR
+
+**Приоритет:** ⏳ Зависит от наличия устройства  
+**Сложность:** 🔴 Высокая
+
+- [ ] Установка rtl-sdr драйверов (Windows/Linux/macOS)
+- [ ] Интеграция с `rtl_tcp`
+- [ ] Подключение `dump1090` / `readsb` (ADS-B)
+- [ ] Подключение `aisdecoder` / `gpsd` (AIS)
+- [ ] Подключение `direwolf` / `multimon-ng` (APRS)
+- [ ] Замена эмуляции на реальный ввод в sdr-server/index.ts
+
+---
+
+## Рекомендация
+
+Начать с **Этапа 1 + 2 параллельно** — это даст быструю оптимизацию производительности и постоянное хранение данных, а также API для будущей интеграции с реальным устройством.
+
+---
+
+*Обновлено: 2026-04-11*
