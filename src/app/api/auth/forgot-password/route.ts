@@ -2,9 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { randomUUID } from 'crypto'
 import { forgotPasswordSchema } from '@/lib/validators'
+import { rateLimit, createRateLimitResponse, rateLimits } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
+    const limit = rateLimit(request, rateLimits.auth)
+    if (limit.limited) {
+      return createRateLimitResponse(limit.resetTime)
+    }
+
     const body = await request.json()
     const validation = forgotPasswordSchema.safeParse(body)
 
@@ -57,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`[DEMO] Password reset for ${email}: ${resetUrl}`)
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: 'Если email существует, письмо с инструкциями отправлено',
       // Remove in production
@@ -66,6 +72,12 @@ export async function POST(request: NextRequest) {
         resetUrl
       }
     })
+
+    response.headers.set('X-RateLimit-Limit', rateLimits.auth.maxRequests.toString())
+    response.headers.set('X-RateLimit-Remaining', limit.remaining.toString())
+    response.headers.set('X-RateLimit-Reset', limit.resetTime.toString())
+
+    return response
   } catch (error) {
     console.error('Forgot password error:', error)
     return NextResponse.json(
