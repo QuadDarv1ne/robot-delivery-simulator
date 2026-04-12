@@ -33,7 +33,8 @@ import {
   Trophy,
   RotateCw,
   RotateCcw as RotateLeft,
-  Square
+  Square,
+  Bot
 } from 'lucide-react'
 import {
   DeliveryScenario,
@@ -46,6 +47,7 @@ import { AnalyticsPanel } from '@/components/analytics-panel'
 import { Leaderboard } from '@/components/leaderboard'
 import { AlgorithmEditor } from '@/components/algorithm-editor'
 import { ScenarioEditor } from '@/components/scenario-editor'
+import { MultiRobotPanel } from '@/components/multi-robot-panel'
 import { User as UserType } from '@/lib/auth-context'
 import { useSimulator, type RobotState, type SensorData } from '@/hooks/use-simulator'
 import { LidarView } from '@/components/simulator/lidar-view'
@@ -205,8 +207,8 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
                 <TabsTrigger value="map"><MapPin className="w-4 h-4 mr-2" />Карта</TabsTrigger>
                 <TabsTrigger value="lidar3d"><Layers className="w-4 h-4 mr-2" />3D Lidar</TabsTrigger>
                 <TabsTrigger value="scenarios"><Package className="w-4 h-4 mr-2" />Сценарии</TabsTrigger>
+                <TabsTrigger value="multirobot"><Bot className="w-4 h-4 mr-2" />Мульти-робот</TabsTrigger>
                 <TabsTrigger value="leaderboard"><Trophy className="w-4 h-4 mr-2" />Рейтинг</TabsTrigger>
-                <TabsTrigger value="algorithms"><Code className="w-4 h-4 mr-2" />Алгоритмы</TabsTrigger>
               </TabsList>
 
               <TabsContent value="simulator" className="mt-4">
@@ -335,6 +337,10 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
 
               <TabsContent value="leaderboard" className="mt-4">
                 <Leaderboard currentUserId={user?.id} />
+              </TabsContent>
+
+              <TabsContent value="multirobot" className="mt-4">
+                <MultiRobotPanel />
               </TabsContent>
 
               <TabsContent value="scenarios" className="mt-4">
