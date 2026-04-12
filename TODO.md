@@ -1,6 +1,6 @@
 # TODO - Robot Delivery Simulator
 
-## Текущее состояние (13 марта 2026)
+## Текущее состояние (12 апреля 2026)
 
 ### ✅ Завершено
 - Поиск алгоритмов по названию и языку (Python/JavaScript)
@@ -45,6 +45,10 @@
   - Collision detection с препятствиями
 - Monaco Editor с автодополнением кода (Python/JavaScript)
 - Оптимизация сборки (turbopack, chunk splitting)
+- Рефакторинг simulator-content.tsx (вынесены компоненты: LidarView, IMUView, ControlPanel, UnityWebGLPlayer)
+- Создан хук useSimulator для управления состоянием WebSocket
+- Покрытие тестами: 42 теста проходят (API, Components, Hooks, Utils)
+- Jest конфигурация разделена на 4 проекта для правильной среды тестирования
 
 ### 🔄 В работе
 
