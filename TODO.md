@@ -66,9 +66,9 @@
 - [x] Покрыть тестами Leaderboard и AnalyticsPanel (49 тестов всего)
 - [x] Улучшить типизацию WebSocket событий (shared types, type-safe socket)
 - [x] Добавить rate limiting к чувствительным endpoints (forgot-password, reset-password, admin/users)
-- [ ] Добавить e2e тесты для критических путей
+- [x] Добавить e2e тесты для критических путей
 - [x] Добавить обработку ошибок в API endpoints (algorithms: GET/POST/PUT/DELETE)
-- [ ] Настроить CI pipeline для автотестов
+- [x] Настроить CI pipeline для автотестов (lint, build, test, e2e, security)
 
 #### Фичи из roadmap
 - [ ] Система лидерборда (API уже есть, нужна UI доработка)
