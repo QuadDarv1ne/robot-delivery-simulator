@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
+import { handleApiError, successResponse } from '@/lib/api-error'
 
 // Create demo users on first load
 export async function GET() {
@@ -82,7 +83,7 @@ export async function GET() {
       })
     }
 
-    return NextResponse.json({ 
+    return successResponse({
       success: true,
       users: [
         { email: 'demo@test.ru', password: 'demo123', role: 'student' },
@@ -91,10 +92,6 @@ export async function GET() {
       ]
     })
   } catch (error) {
-    console.error('Create demo users error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка создания демо пользователей' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'DemoUser.GET')
   }
 }

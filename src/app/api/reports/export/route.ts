@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth'
 import { execSync } from 'child_process'
 import path from 'path'
 import fs from 'fs'
+import { handleApiError, createErrorResponse } from '@/lib/api-error'
 
 // Types
 interface ReportData {
@@ -333,11 +334,7 @@ print("PDF_GENERATED_SUCCESS")
     })
 
   } catch (error) {
-    console.error('Report generation error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка генерации отчёта', details: String(error) },
-      { status: 500 }
-    )
+    return handleApiError(error, 'ReportExport.POST')
   } finally {
     // Cleanup
     try {

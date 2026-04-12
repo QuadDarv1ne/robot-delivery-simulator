@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { algorithmSearchSchema } from '@/lib/validators'
+import { handleApiError, successResponse } from '@/lib/api-error'
 
 export async function GET(request: NextRequest) {
   try {
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
       db.algorithm.count({ where })
     ])
 
-    return NextResponse.json({
+    return successResponse({
       algorithms,
       pagination: {
         page: validatedPage,
@@ -69,10 +70,6 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('Failed to search algorithms:', error)
-    return NextResponse.json(
-      { error: 'Ошибка поиска алгоритмов' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Algorithms.SEARCH')
   }
 }

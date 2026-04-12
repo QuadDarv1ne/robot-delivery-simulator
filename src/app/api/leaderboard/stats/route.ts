@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { handleApiError, successResponse } from '@/lib/api-error'
 
 export async function GET() {
   try {
@@ -73,7 +74,7 @@ export async function GET() {
       }
     })
 
-    return NextResponse.json({
+    return successResponse({
       overview: {
         totalDeliveries,
         successfulDeliveries,
@@ -105,10 +106,6 @@ export async function GET() {
     })
 
   } catch (error) {
-    console.error('Leaderboard stats error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка загрузки статистики' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'LeaderboardStats.GET')
   }
 }

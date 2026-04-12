@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { algorithmCloneSchema } from '@/lib/validators'
+import { handleApiError, successResponse } from '@/lib/api-error'
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,12 +52,8 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ algorithm: cloned })
+    return successResponse({ algorithm: cloned })
   } catch (error) {
-    console.error('Failed to clone algorithm:', error)
-    return NextResponse.json(
-      { error: 'Не удалось клонировать алгоритм' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Algorithms.CLONE')
   }
 }

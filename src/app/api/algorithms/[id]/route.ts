@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { handleApiError, successResponse } from '@/lib/api-error'
 
 export async function GET(
   request: NextRequest,
@@ -31,12 +32,8 @@ export async function GET(
       )
     }
 
-    return NextResponse.json({ algorithm })
+    return successResponse({ algorithm })
   } catch (error) {
-    console.error('Failed to fetch algorithm:', error)
-    return NextResponse.json(
-      { error: 'Ошибка получения алгоритма' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'AlgorithmId.GET')
   }
 }

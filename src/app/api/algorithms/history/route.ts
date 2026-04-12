@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { handleApiError, successResponse } from '@/lib/api-error'
 
 // GET - List algorithm run history
 export async function GET(request: NextRequest) {
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
       db.deliveryResult.count({ where })
     ])
 
-    return NextResponse.json({
+    return successResponse({
       deliveries,
       pagination: {
         page,
@@ -65,10 +66,6 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('Failed to fetch run history:', error)
-    return NextResponse.json(
-      { error: 'Ошибка получения истории запусков' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'AlgorithmHistory.GET')
   }
 }

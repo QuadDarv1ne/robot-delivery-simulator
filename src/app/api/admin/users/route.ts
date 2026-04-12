@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { cookies } from 'next/headers'
 import { adminUserUpdateSchema } from '@/lib/validators'
 import { rateLimit, createRateLimitResponse, rateLimits } from '@/lib/rate-limit'
+import { handleApiError, successResponse } from '@/lib/api-error'
 
 // Check admin access
 async function checkAdmin() {
@@ -105,11 +106,7 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('Get users error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка сервера' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'AdminUsers.GET')
   }
 }
 
@@ -157,11 +154,7 @@ export async function PATCH(request: NextRequest) {
       user: updatedUser
     })
   } catch (error) {
-    console.error('Update user error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка сервера' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'AdminUsers.PATCH')
   }
 }
 
@@ -203,10 +196,6 @@ export async function DELETE(request: NextRequest) {
       message: 'Пользователь удалён'
     })
   } catch (error) {
-    console.error('Delete user error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка сервера' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'AdminUsers.DELETE')
   }
 }

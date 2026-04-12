@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { scenarioCloneSchema } from '@/lib/validators'
+import { handleApiError, successResponse } from '@/lib/api-error'
 
 export async function POST(request: NextRequest) {
   try {
@@ -57,12 +58,8 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ scenario: cloned })
+    return successResponse({ scenario: cloned })
   } catch (error) {
-    console.error('Failed to clone scenario:', error)
-    return NextResponse.json(
-      { error: 'Не удалось клонировать сценарий' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Scenarios.CLONE')
   }
 }
