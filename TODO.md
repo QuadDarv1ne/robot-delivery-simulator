@@ -70,7 +70,7 @@
 - [x] Улучшить типизацию WebSocket событий (shared types, type-safe socket)
 - [x] Добавить rate limiting к чувствительным endpoints (forgot-password, reset-password, admin/users)
 - [x] Добавить e2e тесты для критических путей
-- [x] Добавить обработку ошибок в API endpoints (algorithms, scenarios: GET/POST/PUT/DELETE)
+- [x] Добавить обработку ошибок в API endpoints (algorithms, scenarios, user/profile, scenarios/[id])
 - [x] Настроить CI pipeline для автотестов (lint, build, test, e2e, security)
 
 #### Фичи из roadmap
