@@ -47,8 +47,11 @@
 - Оптимизация сборки (turbopack, chunk splitting)
 - Рефакторинг simulator-content.tsx (вынесены компоненты: LidarView, IMUView, ControlPanel, UnityWebGLPlayer)
 - Создан хук useSimulator для управления состоянием WebSocket
-- Покрытие тестами: 42 теста проходят (API, Components, Hooks, Utils)
+- Покрытие тестами: 49 тестов проходят (API, Components, Hooks, Utils)
 - Jest конфигурация разделена на 4 проекта для правильной среды тестирования
+- E2E тесты для критических путей (Playwright)
+- CI/CD pipeline (GitHub Actions: lint, build, test, e2e, security)
+- TypeScript компиляция проходит без ошибок (tsc --noEmit: 0 ошибок)
 
 ### 🔄 В работе
 

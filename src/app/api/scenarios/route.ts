@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { scenarioCreateSchema, scenarioUpdateSchema } from '@/lib/validators'
+import { handleApiError, createErrorResponse, successResponse } from '@/lib/api-error'
 
 // GET - List scenarios
 export async function GET(request: NextRequest) {
@@ -11,31 +12,20 @@ export async function GET(request: NextRequest) {
     const publicOnly = searchParams.get('public') === 'true'
 
     const where: any = {}
-    if (publicOnly) {
-      where.isPublic = true
-    }
+    if (publicOnly) where.isPublic = true
 
     const scenarios = await db.deliveryScenario.findMany({
       where,
       include: {
-        creator: {
-          select: { id: true, name: true, email: true }
-        },
-        _count: {
-          select: { deliveryResults: true }
-        }
+        creator: { select: { id: true, name: true, email: true } },
+        _count: { select: { deliveryResults: true } }
       },
       orderBy: { createdAt: 'desc' }
     })
 
-    return NextResponse.json({ scenarios })
-
+    return successResponse({ scenarios })
   } catch (error) {
-    console.error('Scenarios fetch error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка загрузки сценариев' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Scenarios.GET')
   }
 }
 
@@ -44,15 +34,13 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
+      return createErrorResponse({ message: 'Не авторизован', status: 401, context: 'Scenarios.POST' })
     }
 
-    const user = await db.user.findUnique({
-      where: { email: session.user.email }
-    })
+    const user = await db.user.findUnique({ where: { email: session.user.email } })
 
     if (!user || (user.role !== 'teacher' && user.role !== 'admin')) {
-      return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 })
+      return createErrorResponse({ message: 'Недостаточно прав', status: 403, context: 'Scenarios.POST' })
     }
 
     const body = await request.json()
@@ -63,10 +51,7 @@ export async function POST(request: NextRequest) {
         field: e.path.join('.'),
         message: e.message
       }))
-      return NextResponse.json(
-        { error: 'Ошибка валидации', details: errors },
-        { status: 400 }
-      )
+      return createErrorResponse({ message: 'Ошибка валидации', status: 400, context: 'Scenarios.POST', details: errors })
     }
 
     const { name, description, difficulty, distance, timeLimit, weather, traffic, startPoint, endPoint, waypoints, obstacles, isPublic } = validation.data
@@ -89,14 +74,9 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ scenario })
-
+    return successResponse({ scenario })
   } catch (error) {
-    console.error('Scenario create error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка создания сценария' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Scenarios.POST')
   }
 }
 
@@ -105,7 +85,7 @@ export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
+      return createErrorResponse({ message: 'Не авторизован', status: 401, context: 'Scenarios.PUT' })
     }
 
     const user = await db.user.findUnique({
@@ -114,7 +94,7 @@ export async function PUT(request: NextRequest) {
     })
 
     if (!user) {
-      return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 })
+      return createErrorResponse({ message: 'Пользователь не найден', status: 404, context: 'Scenarios.PUT' })
     }
 
     const body = await request.json()
@@ -125,41 +105,26 @@ export async function PUT(request: NextRequest) {
         field: e.path.join('.'),
         message: e.message
       }))
-      return NextResponse.json(
-        { error: 'Ошибка валидации', details: errors },
-        { status: 400 }
-      )
+      return createErrorResponse({ message: 'Ошибка валидации', status: 400, context: 'Scenarios.PUT', details: errors })
     }
 
     const { id, ...updateData } = validation.data
 
-    // Check ownership or admin
-    const existing = await db.deliveryScenario.findUnique({
-      where: { id },
-      select: { createdById: true }
-    })
+    const existing = await db.deliveryScenario.findUnique({ where: { id }, select: { createdById: true } })
 
     if (!existing) {
-      return NextResponse.json({ error: 'Сценарий не найден' }, { status: 404 })
+      return createErrorResponse({ message: 'Сценарий не найден', status: 404, context: 'Scenarios.PUT' })
     }
 
     if (existing.createdById !== user.id && user.role !== 'admin') {
-      return NextResponse.json({ error: 'Нет прав на редактирование' }, { status: 403 })
+      return createErrorResponse({ message: 'Нет прав на редактирование', status: 403, context: 'Scenarios.PUT' })
     }
 
-    const scenario = await db.deliveryScenario.update({
-      where: { id },
-      data: updateData
-    })
+    const scenario = await db.deliveryScenario.update({ where: { id }, data: updateData })
 
-    return NextResponse.json({ scenario })
-
+    return successResponse({ scenario })
   } catch (error) {
-    console.error('Scenario update error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка обновления сценария' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Scenarios.PUT')
   }
 }
 
@@ -168,7 +133,7 @@ export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
+      return createErrorResponse({ message: 'Не авторизован', status: 401, context: 'Scenarios.DELETE' })
     }
 
     const user = await db.user.findUnique({
@@ -177,40 +142,30 @@ export async function DELETE(request: NextRequest) {
     })
 
     if (!user) {
-      return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 })
+      return createErrorResponse({ message: 'Пользователь не найден', status: 404, context: 'Scenarios.DELETE' })
     }
 
     const searchParams = request.nextUrl.searchParams
     const id = searchParams.get('id')
 
     if (!id) {
-      return NextResponse.json({ error: 'ID сценария обязателен' }, { status: 400 })
+      return createErrorResponse({ message: 'ID сценария обязателен', status: 400, context: 'Scenarios.DELETE' })
     }
 
-    const existing = await db.deliveryScenario.findUnique({
-      where: { id },
-      select: { createdById: true }
-    })
+    const existing = await db.deliveryScenario.findUnique({ where: { id }, select: { createdById: true } })
 
     if (!existing) {
-      return NextResponse.json({ error: 'Сценарий не найден' }, { status: 404 })
+      return createErrorResponse({ message: 'Сценарий не найден', status: 404, context: 'Scenarios.DELETE' })
     }
 
     if (existing.createdById !== user.id && user.role !== 'admin') {
-      return NextResponse.json({ error: 'Нет прав на удаление' }, { status: 403 })
+      return createErrorResponse({ message: 'Нет прав на удаление', status: 403, context: 'Scenarios.DELETE' })
     }
 
-    await db.deliveryScenario.delete({
-      where: { id }
-    })
+    await db.deliveryScenario.delete({ where: { id } })
 
-    return NextResponse.json({ success: true })
-
+    return successResponse({ success: true })
   } catch (error) {
-    console.error('Scenario delete error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка удаления сценария' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Scenarios.DELETE')
   }
 }
