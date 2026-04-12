@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import { randomUUID } from 'crypto'
 import { rateLimit, createRateLimitResponse, rateLimits } from '@/lib/rate-limit'
 import { loginSchema } from '@/lib/validators'
+import { handleApiError, createErrorResponse, successResponse } from '@/lib/api-error'
 
 export async function POST(request: NextRequest) {
   const limit = rateLimit(request, rateLimits.auth)
@@ -22,10 +23,7 @@ export async function POST(request: NextRequest) {
         field: e.path.join('.'),
         message: e.message
       }))
-      return NextResponse.json(
-        { error: 'Ошибка валидации', details: errors },
-        { status: 400 }
-      )
+      return createErrorResponse({ message: 'Ошибка валидации', status: 400, context: 'Auth.LOGIN', details: errors })
     }
 
     const { email, password } = validation.data
@@ -35,19 +33,13 @@ export async function POST(request: NextRequest) {
     })
 
     if (!user || !user.password) {
-      return NextResponse.json(
-        { error: 'Неверный email или пароль' },
-        { status: 401 }
-      )
+      return createErrorResponse({ message: 'Неверный email или пароль', status: 401, context: 'Auth.LOGIN' })
     }
 
     const isValid = await bcrypt.compare(password, user.password)
 
     if (!isValid) {
-      return NextResponse.json(
-        { error: 'Неверный email или пароль' },
-        { status: 401 }
-      )
+      return createErrorResponse({ message: 'Неверный email или пароль', status: 401, context: 'Auth.LOGIN' })
     }
 
     const token = randomUUID()
@@ -96,10 +88,6 @@ export async function POST(request: NextRequest) {
 
     return response
   } catch (error) {
-    console.error('Login error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка сервера' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Auth.LOGIN')
   }
 }

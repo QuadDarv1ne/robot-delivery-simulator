@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { algorithmRunSchema } from '@/lib/validators'
+import { handleApiError, createErrorResponse, successResponse } from '@/lib/api-error'
 
 interface SimulationResult {
   success: boolean
@@ -256,7 +257,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({
+    return successResponse({
       result: {
         ...result,
         deliveryResultId: deliveryResult.id
@@ -264,10 +265,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Algorithm run error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка выполнения алгоритма' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'AlgorithmRun.POST')
   }
 }

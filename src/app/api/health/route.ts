@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { handleApiError } from '@/lib/api-error'
+import { logger } from '@/lib/logger'
 
 export async function GET() {
   const startTime = Date.now()
@@ -16,7 +17,7 @@ export async function GET() {
       dbLatency = Date.now() - dbStart
     } catch (error) {
       dbStatus = 'error'
-      console.error('Database health check failed:', error)
+      logger.warn('Database health check failed', 'Health', error)
     }
 
     const health = {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { cookies } from 'next/headers'
+import { handleApiError, successResponse } from '@/lib/api-error'
 
 export async function POST() {
   try {
@@ -23,12 +24,8 @@ export async function POST() {
 
     cookieStore.delete('session_token')
 
-    return NextResponse.json({ success: true })
+    return successResponse({ success: true })
   } catch (error) {
-    console.error('Logout error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка сервера' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Auth.LOGOUT')
   }
 }
