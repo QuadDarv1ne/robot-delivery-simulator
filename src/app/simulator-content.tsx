@@ -41,6 +41,7 @@ import {
   ScenarioSelector,
   DeliveryProgress
 } from '@/components/delivery-scenarios'
+import { DBScenarioSelector } from '@/components/db-scenario-selector'
 import { AnalyticsPanel } from '@/components/analytics-panel'
 import { Leaderboard } from '@/components/leaderboard'
 import { AlgorithmEditor } from '@/components/algorithm-editor'
@@ -420,10 +421,10 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
 
               <TabsContent value="delivery">
                 {!selectedScenario ? (
-                  <Card>
-                    <CardHeader className="pb-2"><CardTitle className="text-sm">Сценарии доставки</CardTitle><CardDescription>Выберите миссию</CardDescription></CardHeader>
-                    <CardContent><ScenarioSelector onSelect={handleSelectScenario} selectedId={selectedScenario ? (selectedScenario as DeliveryScenario).id : undefined} /></CardContent>
-                  </Card>
+                  <DBScenarioSelector
+                    onSelect={handleSelectScenario}
+                    selectedId={selectedScenario ? (selectedScenario as DeliveryScenario).id : undefined}
+                  />
                 ) : (
                   <DeliveryProgress session={deliverySession} scenario={selectedScenario} onPause={handlePauseDelivery} onResume={handleStartDelivery} onReset={handleResetDelivery} onCancel={handleCancelDelivery} />
                 )}

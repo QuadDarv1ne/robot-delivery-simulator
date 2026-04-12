@@ -1,5 +1,3 @@
-'use client'
-
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -46,8 +44,11 @@ import {
   Filter,
   Share2,
   Navigation,
-  Route
+  Route,
+  Shield
 } from 'lucide-react'
+import { RouteMapEditor } from '@/components/route-map-editor'
+import { ScenarioTestPanel } from '@/components/scenario-test-panel'
 
 interface Point {
   lat: number
@@ -117,6 +118,8 @@ export function ScenarioEditor() {
   const [totalItems, setTotalItems] = useState(0)
   const [showRouteEditor, setShowRouteEditor] = useState(false)
   const [waypoints, setWaypoints] = useState<Point[]>([])
+  const [obstacles, setObstacles] = useState<Obstacle[]>([])
+  const [showTestPanel, setShowTestPanel] = useState(false)
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
@@ -304,37 +307,26 @@ export function ScenarioEditor() {
 
   const handleOpenRouteEditor = () => {
     try {
-      const parsed = JSON.parse(formData.waypoints || '[]')
-      setWaypoints(Array.isArray(parsed) ? parsed : [])
+      const parsedWaypoints = JSON.parse(formData.waypoints || '[]')
+      const parsedObstacles = JSON.parse(formData.obstacles || '[]')
+      setWaypoints(Array.isArray(parsedWaypoints) ? parsedWaypoints : [])
+      setObstacles(Array.isArray(parsedObstacles) ? parsedObstacles : [])
     } catch {
       setWaypoints([])
+      setObstacles([])
     }
     setShowRouteEditor(true)
   }
 
-  const handleSaveRouteEditor = () => {
-    setFormData({ ...formData, waypoints: JSON.stringify(waypoints) })
+  const handleSaveRouteEditor = (points: Point[], obstacles: Obstacle[]) => {
+    setFormData({ 
+      ...formData, 
+      waypoints: JSON.stringify(points),
+      obstacles: JSON.stringify(obstacles)
+    })
+    setWaypoints(points)
     setShowRouteEditor(false)
-    toast.success('Маршрут обновлён')
-  }
-
-  const handleAddWaypoint = () => {
-    const newPoint: Point = {
-      lat: 55.75 + Math.random() * 0.01,
-      lon: 37.61 + Math.random() * 0.01,
-      name: `Точка ${waypoints.length + 1}`
-    }
-    setWaypoints([...waypoints, newPoint])
-  }
-
-  const handleUpdateWaypoint = (index: number, field: keyof Point, value: string | number) => {
-    const updated = [...waypoints]
-    updated[index] = { ...updated[index], [field]: value }
-    setWaypoints(updated)
-  }
-
-  const handleDeleteWaypoint = (index: number) => {
-    setWaypoints(waypoints.filter((_, i) => i !== index))
+    toast.success('Маршрут и препятствия обновлены')
   }
 
   const getDifficultyBadge = (difficulty: string) => {
@@ -661,94 +653,65 @@ export function ScenarioEditor() {
 
               <Separator />
 
-              <Button className="w-full" onClick={handleSave} disabled={!formData.name.trim() || isSaving}>
-                {isSaving ? (
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4 mr-2" />
-                )}
-                Сохранить сценарий
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowTestPanel(!showTestPanel)}
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  {showTestPanel ? 'Скрыть тесты' : 'Тестировать'}
+                </Button>
+                <Button className="w-full" onClick={handleSave} disabled={!formData.name.trim() || isSaving}>
+                  {isSaving ? (
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Сохранить
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Test Panel */}
+      {showTestPanel && (
+        <ScenarioTestPanel
+          scenarioData={{
+            startPoint: formData.startPoint,
+            endPoint: formData.endPoint,
+            waypoints: formData.waypoints,
+            obstacles: formData.obstacles,
+            distance: formData.distance,
+            timeLimit: formData.timeLimit,
+            difficulty: formData.difficulty,
+            weather: formData.weather,
+            traffic: formData.traffic
+          }}
+        />
+      )}
+
       {/* Route Editor Dialog */}
       <Dialog open={showRouteEditor} onOpenChange={setShowRouteEditor}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-7xl h-[90vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Route className="w-5 h-5" />
-              Редактор маршрута
+              Визуальный редактор маршрута
             </DialogTitle>
             <DialogDescription>
-              Добавьте контрольные точки маршрута
+              Кликните на карту для добавления точек маршрута и препятствий
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 max-h-[400px] overflow-y-auto">
-            {waypoints.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
-                <Navigation className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>Нет точек маршрута</p>
-              </div>
-            ) : (
-              waypoints.map((point, index) => (
-                <Card key={index}>
-                  <CardContent className="p-3">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="shrink-0">#{index + 1}</Badge>
-                      <Input
-                        value={point.name}
-                        onChange={(e) => handleUpdateWaypoint(index, 'name', e.target.value)}
-                        placeholder="Название точки"
-                        className="flex-1"
-                      />
-                      <Input
-                        type="number"
-                        step="0.0001"
-                        value={point.lat}
-                        onChange={(e) => handleUpdateWaypoint(index, 'lat', parseFloat(e.target.value) || 0)}
-                        placeholder="Широта"
-                        className="w-28"
-                      />
-                      <Input
-                        type="number"
-                        step="0.0001"
-                        value={point.lon}
-                        onChange={(e) => handleUpdateWaypoint(index, 'lon', parseFloat(e.target.value) || 0)}
-                        placeholder="Долгота"
-                        className="w-28"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteWaypoint(index)}
-                        className="shrink-0"
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-
-          <Button variant="outline" className="w-full" onClick={handleAddWaypoint}>
-            <Plus className="w-4 h-4 mr-2" />
-            Добавить точку
-          </Button>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRouteEditor(false)}>
-              Отмена
-            </Button>
-            <Button onClick={handleSaveRouteEditor}>
-              Сохранить
-            </Button>
-          </DialogFooter>
+          <RouteMapEditor
+            initialPoints={waypoints}
+            initialObstacles={obstacles}
+            onSave={handleSaveRouteEditor}
+            onCancel={() => setShowRouteEditor(false)}
+          />
         </DialogContent>
       </Dialog>
     </div>
