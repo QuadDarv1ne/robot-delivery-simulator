@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { algorithmIdSchema } from '@/lib/validators'
+import { handleApiError, successResponse } from '@/lib/api-error'
 
 // GET - List favorite algorithms
 export async function GET(request: NextRequest) {
@@ -38,15 +39,11 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' }
     })
 
-    return NextResponse.json({ 
+    return successResponse({
       favorites: favorites.map(f => f.algorithm)
     })
   } catch (error) {
-    console.error('Failed to fetch favorites:', error)
-    return NextResponse.json(
-      { error: 'Ошибка получения избранных алгоритмов' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'AlgorithmFavorite.GET')
   }
 }
 
@@ -125,13 +122,9 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ favorite: favorite.algorithm })
+    return successResponse({ favorite: favorite.algorithm })
   } catch (error) {
-    console.error('Failed to add to favorites:', error)
-    return NextResponse.json(
-      { error: 'Ошибка добавления в избранное' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'AlgorithmFavorite.POST')
   }
 }
 
@@ -175,12 +168,8 @@ export async function DELETE(request: NextRequest) {
       where: { id: favorite.id }
     })
 
-    return NextResponse.json({ success: true })
+    return successResponse({ success: true })
   } catch (error) {
-    console.error('Failed to remove from favorites:', error)
-    return NextResponse.json(
-      { error: 'Ошибка удаления из избранного' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'AlgorithmFavorite.DELETE')
   }
 }

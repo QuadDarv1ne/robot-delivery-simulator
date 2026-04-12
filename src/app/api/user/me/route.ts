@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { cookies } from 'next/headers'
+import { handleApiError, successResponse } from '@/lib/api-error'
 
 export async function GET() {
   try {
@@ -35,7 +36,7 @@ export async function GET() {
       data: { lastActiveAt: new Date() }
     })
 
-    return NextResponse.json({
+    return successResponse({
       user: {
         id: session.user.id,
         email: session.user.email,
@@ -52,10 +53,6 @@ export async function GET() {
       }
     })
   } catch (error) {
-    console.error('Get user error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка сервера' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'UserMe.GET')
   }
 }

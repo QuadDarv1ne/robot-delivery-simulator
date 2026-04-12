@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import crypto from 'crypto'
+import { handleApiError, successResponse } from '@/lib/api-error'
 
 // POST - Send verification email
 export async function POST(request: NextRequest) {
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
     console.log('========================================')
 
     // For development, return the token
-    return NextResponse.json({
+    return successResponse({
       success: true,
       message: 'Письмо отправлено',
       // Remove in production
@@ -74,10 +75,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Send verification error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка отправки письма' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'AuthResendVerification.POST')
   }
 }

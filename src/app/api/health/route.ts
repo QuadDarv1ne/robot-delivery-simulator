@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { handleApiError } from '@/lib/api-error'
 
 export async function GET() {
   const startTime = Date.now()
@@ -45,11 +46,6 @@ export async function GET() {
       },
     })
   } catch (error) {
-    console.error('Health check failed:', error)
-    return NextResponse.json({
-      status: 'unhealthy',
-      timestamp: new Date().toISOString(),
-      error: 'Health check failed',
-    }, { status: 503 })
+    return handleApiError(error, 'Health.GET')
   }
 }

@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 import { resetPasswordSchema } from '@/lib/validators'
 import { rateLimit, createRateLimitResponse, rateLimits } from '@/lib/rate-limit'
+import { handleApiError, successResponse } from '@/lib/api-error'
 
 export async function POST(request: NextRequest) {
   try {
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
       where: { userId: user.id }
     })
 
-    const response = NextResponse.json({
+    const response = successResponse({
       success: true,
       message: 'Пароль успешно изменён'
     })
@@ -90,11 +91,7 @@ export async function POST(request: NextRequest) {
 
     return response
   } catch (error) {
-    console.error('Reset password error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка сервера' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'AuthResetPassword.POST')
   }
 }
 
@@ -134,10 +131,6 @@ export async function GET(request: NextRequest) {
       email: resetToken.email.replace(/(.{2})(.*)(@.*)/, '$1***$3')
     })
   } catch (error) {
-    console.error('Verify token error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка сервера' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'AuthResetToken.GET')
   }
 }

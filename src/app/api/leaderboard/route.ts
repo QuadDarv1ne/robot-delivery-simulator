@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { rateLimit, createRateLimitResponse, rateLimits, getClientIP } from '@/lib/rate-limit'
+import { handleApiError, successResponse } from '@/lib/api-error'
 
 interface LeaderboardUser {
   id: string
@@ -175,10 +176,6 @@ export async function GET(request: NextRequest) {
     return response
 
   } catch (error) {
-    console.error('Leaderboard error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка загрузки рейтинга' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Leaderboard.GET')
   }
 }

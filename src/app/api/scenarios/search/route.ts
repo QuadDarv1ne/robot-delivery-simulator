@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { scenarioSearchSchema } from '@/lib/validators'
+import { handleApiError, successResponse } from '@/lib/api-error'
 
 export async function GET(request: NextRequest) {
   try {
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest) {
       db.deliveryScenario.count({ where })
     ])
 
-    return NextResponse.json({
+    return successResponse({
       scenarios,
       pagination: {
         page: validatedPage,
@@ -73,10 +74,6 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('Failed to search scenarios:', error)
-    return NextResponse.json(
-      { error: 'Ошибка поиска сценариев' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Scenarios.SEARCH')
   }
 }

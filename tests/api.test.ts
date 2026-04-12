@@ -244,7 +244,7 @@ describe('API Endpoints', () => {
       const data = await response.json()
 
       expect(response.status).toBe(200)
-      expect(data.algorithm.name).toContain('(Copy)')
+      expect(data.data.algorithm.name).toContain('(Copy)')
       expect(db.algorithm.create).toHaveBeenCalled()
     })
 
@@ -300,7 +300,7 @@ describe('API Endpoints', () => {
       const data = await response.json()
 
       expect(response.status).toBe(200)
-      expect(data.scenario.name).toContain('(Copy)')
+      expect(data.data.scenario.name).toContain('(Copy)')
       expect(db.deliveryScenario.create).toHaveBeenCalled()
     })
 

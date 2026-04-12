@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { handleApiError, successResponse } from '@/lib/api-error'
 
 // POST - Verify email with token
 export async function POST(request: NextRequest) {
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
       where: { token }
     })
 
-    return NextResponse.json({
+    return successResponse({
       success: true,
       message: 'Email успешно подтверждён',
       user: {
@@ -85,11 +86,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Email verification error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка подтверждения email' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'AuthVerifyEmail.POST')
   }
 }
 
@@ -137,10 +134,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Token check error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка проверки токена' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'AuthVerifyToken.GET')
   }
 }
