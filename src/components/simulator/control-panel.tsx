@@ -1,10 +1,10 @@
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Square, RotateCcw } from 'lucide-react'
-import type { RobotState } from '@/types/websocket'
+import type { RobotState, ControlCommandType } from '@/types/websocket'
 
 interface ControlPanelProps {
-  onCommand: (type: string, data?: Record<string, unknown>) => void
+  onCommand: (type: ControlCommandType, data?: Record<string, unknown>) => void
   robotState: RobotState | null
 }
 

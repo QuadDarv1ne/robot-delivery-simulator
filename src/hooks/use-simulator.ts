@@ -22,7 +22,7 @@ export function useSimulator() {
     isConnected: false
   })
 
-  const socketRef = useRef<ReturnType<typeof io<ServerToClientEvents, ClientToServerEvents>> | null>(null)
+  const socketRef = useRef<ReturnType<typeof io> | null>(null)
 
   const handleSensorData = useCallback((data: SensorDataEvent) => {
     setState(prev => ({ ...prev, sensorData: data.sensorData, robotState: data.robotState }))
@@ -33,7 +33,7 @@ export function useSimulator() {
   }, [])
 
   useEffect(() => {
-    const socket = io<ServerToClientEvents, ClientToServerEvents>('http://localhost:3003', {
+    const socket = io('http://localhost:3003', {
       path: '/',
       transports: ['websocket', 'polling'],
       reconnection: true,
