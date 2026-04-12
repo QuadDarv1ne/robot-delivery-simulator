@@ -49,9 +49,9 @@
 ### 🔄 В работе
 
 ### ⚠️ Проблемы качества
-- [ ] Тесты hooks failing — `window is not defined` (jest.config.ts: нужен `jsdom` для hooks.test.ts)
-- [ ] console.error в health check тесте — ошибка логируется при штатном тесте
-- [ ] simulator-content.tsx — 814 строк, слишком большой файл, требует разделения
+- [x] Тесты hooks failing — `window is not defined` (исправлено: projects config в jest.config.ts)
+- [x] console.error в health check тесте — ошибка логируется при штатном тесте (исправлено: mock console.error)
+- [x] simulator-content.tsx — 814 строк, слишком большой файл (рефакторинг: вынесены компоненты)
 
 ### 📋 План работ
 

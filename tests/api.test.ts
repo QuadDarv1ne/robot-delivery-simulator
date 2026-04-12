@@ -71,6 +71,8 @@ describe('API Endpoints', () => {
       const { db } = await import('@/lib/db')
       ;(db.$queryRaw as jest.Mock).mockRejectedValue(new Error('DB error'))
 
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
+
       const { GET } = await import('@/app/api/health/route')
       const response = await GET()
 
@@ -78,6 +80,8 @@ describe('API Endpoints', () => {
       const data = await response.json()
       expect(data.status).toBe('unhealthy')
       expect(data.services.database.status).toBe('error')
+
+      consoleErrorSpy.mockRestore()
     })
   })
 
