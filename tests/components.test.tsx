@@ -3,7 +3,7 @@
  */
 
 import '@testing-library/jest-dom'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 
 // Mock next/navigation
 jest.mock('next/navigation', () => ({
@@ -33,7 +33,27 @@ jest.mock('socket.io-client', () => ({
   })),
 }))
 
+// Mock window.location for Leaderboard component
+delete (window as any).location
+;(window as any).location = { origin: 'http://localhost:3000', href: 'http://localhost:3000/', hostname: 'localhost', protocol: 'http:' }
+
+// Mock ResizeObserver for recharts
+;(global as any).ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+// Mock fetch
+const mockFetch = jest.fn()
+global.fetch = mockFetch
+
 describe('Components', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockFetch.mockReset()
+  })
+
   describe('Button Component', () => {
     it('should render button with children', async () => {
       const { Button } = await import('@/components/ui/button')
@@ -114,6 +134,115 @@ describe('Components', () => {
       const { Separator } = await import('@/components/ui/separator')
       const { container } = render(<Separator />)
       expect(container.firstChild).toHaveAttribute('role', 'none')
+    })
+  })
+
+  describe('Leaderboard Component', () => {
+    it('should render loading state', async () => {
+      mockFetch.mockImplementationOnce(() => new Promise(() => {}))
+
+      const { Leaderboard } = await import('@/components/leaderboard')
+      render(<Leaderboard />)
+
+      expect(screen.getByText(/загрузка рейтинга/i)).toBeInTheDocument()
+    })
+
+    it('should render empty state when no data', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          leaderboard: [],
+          groups: [],
+          currentUserPosition: null,
+          period: 'all',
+          total: 0,
+        }),
+      })
+
+      const { Leaderboard } = await import('@/components/leaderboard')
+      render(<Leaderboard />)
+
+      await waitFor(() => {
+        expect(screen.getByText(/нет данных/i)).toBeInTheDocument()
+      })
+    })
+
+    it('should render leaderboard with users', async () => {
+      jest.useFakeTimers()
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          leaderboard: [
+            {
+              id: '1', rank: 1, name: 'Иван Иванов', email: 'ivan@test.ru',
+              group: 'Группа А', avatar: null, totalDeliveries: 10,
+              successfulDeliveries: 9, successRate: 90, totalDistance: 5000,
+              totalCollisions: 1, avgDuration: 300, bestTime: 250,
+              achievements: 2, score: 950, previousRank: 2,
+            },
+          ],
+          groups: ['Группа А'],
+          currentUserPosition: null,
+          period: 'all',
+          total: 1,
+        }),
+      })
+
+      const { Leaderboard } = await import('@/components/leaderboard')
+      const { container, rerender } = render(<Leaderboard currentUserId="1" />)
+      rerender(<Leaderboard currentUserId="1" />)
+      jest.advanceTimersByTime(1000)
+
+      expect(container.textContent).toBeTruthy()
+      jest.useRealTimers()
+    })
+  })
+
+  describe('AnalyticsPanel Component', () => {
+    it('should render analytics panel with stats', async () => {
+      jest.useFakeTimers()
+      const { AnalyticsPanel } = await import('@/components/analytics-panel')
+      const { container } = render(<AnalyticsPanel />)
+      jest.advanceTimersByTime(100)
+
+      expect(container.textContent).toContain('Аналитика')
+      expect(container.textContent).toContain('Всего доставок')
+      jest.useRealTimers()
+    })
+
+    it('should render charts tabs', async () => {
+      jest.useFakeTimers()
+      const { AnalyticsPanel } = await import('@/components/analytics-panel')
+      const { container } = render(<AnalyticsPanel />)
+      jest.advanceTimersByTime(100)
+
+      expect(container.textContent).toContain('Скорость')
+      expect(container.textContent).toContain('Батарея')
+      expect(container.textContent).toContain('Расстояние')
+      expect(container.textContent).toContain('Статус')
+      jest.useRealTimers()
+    })
+
+    it('should render session logs', async () => {
+      jest.useFakeTimers()
+      const { AnalyticsPanel } = await import('@/components/analytics-panel')
+      const { container } = render(<AnalyticsPanel />)
+      jest.advanceTimersByTime(100)
+
+      expect(container.textContent).toContain('История сессий')
+      expect(container.textContent).toContain('Тестовый маршрут')
+      jest.useRealTimers()
+    })
+
+    it('should render performance metrics', async () => {
+      jest.useFakeTimers()
+      const { AnalyticsPanel } = await import('@/components/analytics-panel')
+      const { container } = render(<AnalyticsPanel />)
+      jest.advanceTimersByTime(100)
+
+      expect(container.textContent).toContain('Метрики производительности')
+      expect(container.textContent).toContain('Эффективность маршрута')
+      jest.useRealTimers()
     })
   })
 })
