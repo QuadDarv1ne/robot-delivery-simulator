@@ -62,11 +62,11 @@
 #### Улучшения
 - [ ] Продолжить оптимизацию размера сборки
 - [x] Рефакторинг simulator-content.tsx на меньшие компоненты
-- [x] Покрыть тестами компоненты (Button, Card, Badge, Progress, Input, Separator — 42 теста)
+- [x] Покрыть тестами компоненты (Button, Card, Badge, Progress, Input, Separator)
+- [x] Покрыть тестами Leaderboard и AnalyticsPanel (49 тестов всего)
 - [x] Улучшить типизацию WebSocket событий (shared types, type-safe socket)
 - [x] Добавить rate limiting к чувствительным endpoints (forgot-password, reset-password, admin/users)
 - [ ] Добавить e2e тесты для критических путей
-- [ ] Покрыть тестами компоненты (admin-panel, analytics-panel, leaderboard)
 - [ ] Добавить обработку ошибок в API endpoints
 - [ ] Настроить CI pipeline для автотестов
 
