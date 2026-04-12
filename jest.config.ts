@@ -30,7 +30,7 @@ const config: Config = {
       displayName: '🧩 Components',
       preset: 'ts-jest',
       testEnvironment: 'jsdom',
-      testMatch: ['<rootDir>/tests/components.test.ts'],
+      testMatch: ['<rootDir>/tests/components.test.tsx'],
       transform: {
         '^.+\\.tsx?$': ['ts-jest', {
           tsconfig: {

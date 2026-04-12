@@ -57,7 +57,8 @@
 
 #### Улучшения
 - [ ] Продолжить оптимизацию размера сборки
-- [ ] Рефакторинг simulator-content.tsx на меньшие компоненты
+- [x] Рефакторинг simulator-content.tsx на меньшие компоненты
+- [x] Покрыть тестами компоненты (Button, Card, Badge, Progress, Input, Separator — 42 теста)
 - [ ] Добавить e2e тесты для критических путей
 - [ ] Покрыть тестами компоненты (admin-panel, analytics-panel, leaderboard)
 - [ ] Добавить обработку ошибок в API endpoints
