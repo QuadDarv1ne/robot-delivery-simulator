@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { cookies } from 'next/headers'
 import { profileUpdateSchema } from '@/lib/validators'
+import { handleApiError, createErrorResponse, successResponse } from '@/lib/api-error'
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -9,10 +10,7 @@ export async function PATCH(request: NextRequest) {
     const token = cookieStore.get('session_token')?.value
 
     if (!token) {
-      return NextResponse.json(
-        { error: 'Не авторизован' },
-        { status: 401 }
-      )
+      return createErrorResponse({ message: 'Не авторизован', status: 401, context: 'User.PATCH' })
     }
 
     const session = await db.userSession.findUnique({
@@ -25,10 +23,7 @@ export async function PATCH(request: NextRequest) {
         await db.userSession.delete({ where: { token } })
       }
       cookieStore.delete('session_token')
-      return NextResponse.json(
-        { error: 'Сессия истекла' },
-        { status: 401 }
-      )
+      return createErrorResponse({ message: 'Сессия истекла', status: 401, context: 'User.PATCH' })
     }
 
     const body = await request.json()
@@ -39,10 +34,12 @@ export async function PATCH(request: NextRequest) {
         field: e.path.join('.'),
         message: e.message
       }))
-      return NextResponse.json(
-        { error: 'Ошибка валидации', details: errors },
-        { status: 400 }
-      )
+      return createErrorResponse({
+        message: 'Ошибка валидации',
+        status: 400,
+        context: 'User.PATCH',
+        details: errors
+      })
     }
 
     const updateData = validation.data
@@ -52,7 +49,7 @@ export async function PATCH(request: NextRequest) {
       data: updateData
     })
 
-    return NextResponse.json({
+    return successResponse({
       user: {
         id: updatedUser.id,
         email: updatedUser.email,
@@ -63,10 +60,6 @@ export async function PATCH(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('Update profile error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка сервера' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'User.PATCH')
   }
 }

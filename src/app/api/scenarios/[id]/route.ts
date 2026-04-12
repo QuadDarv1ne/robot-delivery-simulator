@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { scenarioIdSchema } from '@/lib/validators'
+import { handleApiError, createErrorResponse, successResponse } from '@/lib/api-error'
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,10 +9,7 @@ export async function GET(request: NextRequest) {
     const id = searchParams.get('id')
 
     if (!id) {
-      return NextResponse.json(
-        { error: 'ID сценария обязателен' },
-        { status: 400 }
-      )
+      return createErrorResponse({ message: 'ID сценария обязателен', status: 400, context: 'ScenarioId.GET' })
     }
 
     const validation = scenarioIdSchema.safeParse({ id })
@@ -21,21 +19,19 @@ export async function GET(request: NextRequest) {
         field: e.path.join('.'),
         message: e.message
       }))
-      return NextResponse.json(
-        { error: 'Ошибка валидации', details: errors },
-        { status: 400 }
-      )
+      return createErrorResponse({
+        message: 'Ошибка валидации',
+        status: 400,
+        context: 'ScenarioId.GET',
+        details: errors
+      })
     }
 
     const scenario = await db.deliveryScenario.findUnique({
       where: { id },
       include: {
         creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         },
         deliveryResults: {
           select: {
@@ -45,35 +41,20 @@ export async function GET(request: NextRequest) {
             duration: true,
             efficiencyScore: true,
             createdAt: true,
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true
-              }
-            }
+            user: { select: { id: true, name: true, email: true } }
           },
-          orderBy: {
-            startTime: 'desc'
-          },
+          orderBy: { startTime: 'desc' },
           take: 10
         }
       }
     })
 
     if (!scenario) {
-      return NextResponse.json(
-        { error: 'Сценарий не найден' },
-        { status: 404 }
-      )
+      return createErrorResponse({ message: 'Сценарий не найден', status: 404, context: 'ScenarioId.GET' })
     }
 
-    return NextResponse.json({ scenario })
+    return successResponse({ scenario })
   } catch (error) {
-    console.error('Failed to fetch scenario:', error)
-    return NextResponse.json(
-      { error: 'Ошибка получения сценария' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'ScenarioId.GET')
   }
 }
