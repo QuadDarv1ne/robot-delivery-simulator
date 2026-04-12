@@ -138,13 +138,13 @@ describe('Components', () => {
   })
 
   describe('Leaderboard Component', () => {
-    it('should render loading state', async () => {
+    it('should render loading skeleton', async () => {
       mockFetch.mockImplementationOnce(() => new Promise(() => {}))
 
       const { Leaderboard } = await import('@/components/leaderboard')
-      render(<Leaderboard />)
+      const { container } = render(<Leaderboard />)
 
-      expect(screen.getByText(/загрузка рейтинга/i)).toBeInTheDocument()
+      expect(container.querySelector('[data-slot="skeleton"]')).toBeInTheDocument()
     })
 
     it('should render empty state when no data', async () => {
@@ -156,19 +156,19 @@ describe('Components', () => {
           currentUserPosition: null,
           period: 'all',
           total: 0,
+          pagination: { page: 1, limit: 20, totalPages: 0 },
         }),
       })
 
       const { Leaderboard } = await import('@/components/leaderboard')
-      render(<Leaderboard />)
+      const { container } = render(<Leaderboard />)
 
       await waitFor(() => {
-        expect(screen.getByText(/нет данных/i)).toBeInTheDocument()
+        expect(container.textContent).toContain('Нет данных')
       })
     })
 
     it('should render leaderboard with users', async () => {
-      jest.useFakeTimers()
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({
@@ -185,16 +185,17 @@ describe('Components', () => {
           currentUserPosition: null,
           period: 'all',
           total: 1,
+          pagination: { page: 1, limit: 20, totalPages: 1 },
         }),
       })
 
       const { Leaderboard } = await import('@/components/leaderboard')
-      const { container, rerender } = render(<Leaderboard currentUserId="1" />)
-      rerender(<Leaderboard currentUserId="1" />)
-      jest.advanceTimersByTime(1000)
+      const { container } = render(<Leaderboard currentUserId="1" />)
 
-      expect(container.textContent).toBeTruthy()
-      jest.useRealTimers()
+      await waitFor(() => {
+        expect(container.textContent).toContain('Иван')
+        expect(container.textContent).toContain('Рейтинг')
+      })
     })
   })
 
