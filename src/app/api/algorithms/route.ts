@@ -3,13 +3,14 @@ import { db } from '@/lib/db'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { algorithmCreateSchema, algorithmUpdateSchema } from '@/lib/validators'
+import { handleApiError, createErrorResponse, successResponse } from '@/lib/api-error'
 
 // GET - List user's algorithms
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
+      return createErrorResponse({ message: 'Не авторизован', status: 401, context: 'Algorithms.GET' })
     }
 
     const user = await db.user.findUnique({
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
     })
 
     if (!user) {
-      return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 })
+      return createErrorResponse({ message: 'Пользователь не найден', status: 404, context: 'Algorithms.GET' })
     }
 
     const searchParams = request.nextUrl.searchParams
@@ -45,14 +46,10 @@ export async function GET(request: NextRequest) {
       orderBy: { updatedAt: 'desc' }
     })
 
-    return NextResponse.json({ algorithms })
+    return successResponse({ algorithms })
 
   } catch (error) {
-    console.error('Algorithms fetch error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка загрузки алгоритмов' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Algorithms.GET')
   }
 }
 
@@ -61,7 +58,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
+      return createErrorResponse({ message: 'Не авторизован', status: 401, context: 'Algorithms.POST' })
     }
 
     const user = await db.user.findUnique({
@@ -69,7 +66,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!user) {
-      return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 })
+      return createErrorResponse({ message: 'Пользователь не найден', status: 404, context: 'Algorithms.POST' })
     }
 
     const body = await request.json()
@@ -80,10 +77,12 @@ export async function POST(request: NextRequest) {
         field: e.path.join('.'),
         message: e.message
       }))
-      return NextResponse.json(
-        { error: 'Ошибка валидации', details: errors },
-        { status: 400 }
-      )
+      return createErrorResponse({
+        message: 'Ошибка валидации',
+        status: 400,
+        context: 'Algorithms.POST',
+        details: errors
+      })
     }
 
     const { name, description, code, language, isPublic } = validation.data
@@ -99,14 +98,10 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ algorithm })
+    return successResponse({ algorithm })
 
   } catch (error) {
-    console.error('Algorithm create error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка создания алгоритма' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Algorithms.POST')
   }
 }
 
@@ -115,7 +110,7 @@ export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
+      return createErrorResponse({ message: 'Не авторизован', status: 401, context: 'Algorithms.PUT' })
     }
 
     const user = await db.user.findUnique({
@@ -124,7 +119,7 @@ export async function PUT(request: NextRequest) {
     })
 
     if (!user) {
-      return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 })
+      return createErrorResponse({ message: 'Пользователь не найден', status: 404, context: 'Algorithms.PUT' })
     }
 
     const body = await request.json()
@@ -135,44 +130,38 @@ export async function PUT(request: NextRequest) {
         field: e.path.join('.'),
         message: e.message
       }))
-      return NextResponse.json(
-        { error: 'Ошибка валидации', details: errors },
-        { status: 400 }
-      )
+      return createErrorResponse({
+        message: 'Ошибка валидации',
+        status: 400,
+        context: 'Algorithms.PUT',
+        details: errors
+      })
     }
 
     const { id, ...updateData } = validation.data
 
-    // Check ownership
     const existing = await db.algorithm.findUnique({
       where: { id },
       select: { userId: true }
     })
 
     if (!existing) {
-      return NextResponse.json({ error: 'Алгоритм не найден' }, { status: 404 })
+      return createErrorResponse({ message: 'Алгоритм не найден', status: 404, context: 'Algorithms.PUT' })
     }
 
     if (existing.userId !== user.id && user.role !== 'admin' && user.role !== 'teacher') {
-      return NextResponse.json({ error: 'Нет прав на редактирование' }, { status: 403 })
+      return createErrorResponse({ message: 'Нет прав на редактирование', status: 403, context: 'Algorithms.PUT' })
     }
 
     const algorithm = await db.algorithm.update({
       where: { id },
-      data: {
-        ...updateData,
-        updatedAt: new Date()
-      }
+      data: { ...updateData, updatedAt: new Date() }
     })
 
-    return NextResponse.json({ algorithm })
+    return successResponse({ algorithm })
 
   } catch (error) {
-    console.error('Algorithm update error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка обновления алгоритма' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Algorithms.PUT')
   }
 }
 
@@ -181,7 +170,7 @@ export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
+      return createErrorResponse({ message: 'Не авторизован', status: 401, context: 'Algorithms.DELETE' })
     }
 
     const user = await db.user.findUnique({
@@ -190,41 +179,34 @@ export async function DELETE(request: NextRequest) {
     })
 
     if (!user) {
-      return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 })
+      return createErrorResponse({ message: 'Пользователь не найден', status: 404, context: 'Algorithms.DELETE' })
     }
 
     const searchParams = request.nextUrl.searchParams
     const id = searchParams.get('id')
 
     if (!id) {
-      return NextResponse.json({ error: 'ID алгоритма обязателен' }, { status: 400 })
+      return createErrorResponse({ message: 'ID алгоритма обязателен', status: 400, context: 'Algorithms.DELETE' })
     }
 
-    // Check ownership
     const existing = await db.algorithm.findUnique({
       where: { id },
       select: { userId: true }
     })
 
     if (!existing) {
-      return NextResponse.json({ error: 'Алгоритм не найден' }, { status: 404 })
+      return createErrorResponse({ message: 'Алгоритм не найден', status: 404, context: 'Algorithms.DELETE' })
     }
 
     if (existing.userId !== user.id && user.role !== 'admin') {
-      return NextResponse.json({ error: 'Нет прав на удаление' }, { status: 403 })
+      return createErrorResponse({ message: 'Нет прав на удаление', status: 403, context: 'Algorithms.DELETE' })
     }
 
-    await db.algorithm.delete({
-      where: { id }
-    })
+    await db.algorithm.delete({ where: { id } })
 
-    return NextResponse.json({ success: true })
+    return successResponse({ success: true })
 
   } catch (error) {
-    console.error('Algorithm delete error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка удаления алгоритма' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Algorithms.DELETE')
   }
 }
