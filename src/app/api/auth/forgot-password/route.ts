@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { randomUUID } from 'crypto'
 import { forgotPasswordSchema } from '@/lib/validators'
 import { rateLimit, createRateLimitResponse, rateLimits } from '@/lib/rate-limit'
+import { handleApiError, createErrorResponse, successResponse } from '@/lib/api-error'
 
 export async function POST(request: NextRequest) {
   try {
@@ -79,10 +80,6 @@ export async function POST(request: NextRequest) {
 
     return response
   } catch (error) {
-    console.error('Forgot password error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка сервера' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Auth.FORGOT_PASSWORD')
   }
 }

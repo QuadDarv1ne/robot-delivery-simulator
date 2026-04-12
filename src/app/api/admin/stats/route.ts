@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { cookies } from 'next/headers'
+import { handleApiError, createErrorResponse, successResponse } from '@/lib/api-error'
 
 // Check admin access
 async function checkAdmin() {
@@ -29,10 +30,7 @@ export async function GET() {
   try {
     const admin = await checkAdmin()
     if (!admin) {
-      return NextResponse.json(
-        { error: 'Доступ запрещён' },
-        { status: 403 }
-      )
+      return createErrorResponse({ message: 'Доступ запрещён', status: 403, context: 'AdminStats.GET' })
     }
 
     // Get all statistics
@@ -116,7 +114,7 @@ export async function GET() {
       ? Math.round((successfulDeliveries / totalDeliveries) * 100) 
       : 0
 
-    return NextResponse.json({
+    return successResponse({
       overview: {
         totalUsers,
         studentsCount,
@@ -135,10 +133,6 @@ export async function GET() {
       dailyStats
     })
   } catch (error) {
-    console.error('Admin stats error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка сервера' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'AdminStats.GET')
   }
 }

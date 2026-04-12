@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import { randomUUID } from 'crypto'
 import { rateLimit, createRateLimitResponse, rateLimits } from '@/lib/rate-limit'
 import { registerSchema } from '@/lib/validators'
+import { handleApiError, createErrorResponse, successResponse } from '@/lib/api-error'
 
 export async function POST(request: NextRequest) {
   const limit = rateLimit(request, rateLimits.auth)
@@ -90,10 +91,6 @@ export async function POST(request: NextRequest) {
 
     return response
   } catch (error) {
-    console.error('Register error:', error)
-    return NextResponse.json(
-      { error: 'Ошибка сервера' },
-      { status: 500 }
-    )
+    return handleApiError(error, 'Auth.REGISTER')
   }
 }
