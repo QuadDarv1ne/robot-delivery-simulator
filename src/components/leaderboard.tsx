@@ -419,40 +419,41 @@ export function Leaderboard({ currentUserId }: LeaderboardProps) {
       </Card>
 
       {/* Pagination */}
-      {data && data.pagination && data.pagination.totalPages > 1 && (
+      {data && data.pagination && data.pagination.totalPages > 1 && (() => {
+        const { page, totalPages } = data.pagination
+        return (
         <Card>
           <CardContent className="py-4">
             <div className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
-                Страница {data.pagination.page} из {data.pagination.totalPages}
+                Страница {page} из {totalPages}
               </div>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={data.pagination.page <= 1}
+                  disabled={page <= 1}
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                 >
                   ← Назад
                 </Button>
-                {Array.from({ length: Math.min(5, data.pagination.totalPages) }, (_, i) => {
-                  const totalPages = data.pagination.totalPages
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   let pageNum: number
 
                   if (totalPages <= 5) {
                     pageNum = i + 1
-                  } else if (data.pagination.page <= 3) {
+                  } else if (page <= 3) {
                     pageNum = i + 1
-                  } else if (data.pagination.page >= totalPages - 2) {
+                  } else if (page >= totalPages - 2) {
                     pageNum = totalPages - 4 + i
                   } else {
-                    pageNum = data.pagination.page - 2 + i
+                    pageNum = page - 2 + i
                   }
 
                   return (
                     <Button
                       key={pageNum}
-                      variant={pageNum === data.pagination.page ? 'default' : 'outline'}
+                      variant={pageNum === page ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setPage(pageNum)}
                       className="w-8 h-8 p-0"
@@ -464,8 +465,8 @@ export function Leaderboard({ currentUserId }: LeaderboardProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={data.pagination.page >= data.pagination.totalPages}
-                  onClick={() => setPage(p => Math.min(data.pagination.totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 >
                   Далее →
                 </Button>
@@ -473,7 +474,8 @@ export function Leaderboard({ currentUserId }: LeaderboardProps) {
             </div>
           </CardContent>
         </Card>
-      )}
+        )
+      })()}
 
       {/* Legend */}
       <Card>

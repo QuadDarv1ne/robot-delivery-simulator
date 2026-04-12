@@ -80,11 +80,18 @@ export interface DeliveryUpdateEvent {
   status: 'started' | 'in_progress' | 'completed' | 'failed' | 'cancelled'
 }
 
+export interface SimulatorState {
+  robotState: RobotState | null
+  sensorData: SensorData | null
+  isConnected: boolean
+}
+
 // ─── Client → Server Events ──────────────────────────────────────────────
 
 export type ControlCommandType =
   | 'move'
   | 'stop'
+  | 'reset'
   | 'setSpeed'
   | 'setDestination'
   | 'getBattery'
