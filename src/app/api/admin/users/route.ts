@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { cookies } from 'next/headers'
 import { adminUserUpdateSchema } from '@/lib/validators'
+import { rateLimit, createRateLimitResponse, rateLimits } from '@/lib/rate-limit'
 
 // Check admin access
 async function checkAdmin() {
@@ -29,6 +30,11 @@ async function checkAdmin() {
 // Get all users
 export async function GET(request: NextRequest) {
   try {
+    const rateLimitResult = rateLimit(request, rateLimits.api)
+    if (rateLimitResult.limited) {
+      return createRateLimitResponse(rateLimitResult.resetTime)
+    }
+
     const admin = await checkAdmin()
     if (!admin) {
       return NextResponse.json(

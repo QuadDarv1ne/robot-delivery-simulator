@@ -1,14 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Square, RotateCcw } from 'lucide-react'
-
-interface RobotState {
-  position: { x: number; y: number; z: number }
-  rotation: { x: number; y: number; z: number }
-  velocity: { x: number; y: number; z: number }
-  battery: number
-  status: 'idle' | 'moving' | 'delivering' | 'charging' | 'error'
-}
+import type { RobotState } from '@/types/websocket'
 
 interface ControlPanelProps {
   onCommand: (type: string, data?: Record<string, unknown>) => void

@@ -2,9 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 import { resetPasswordSchema } from '@/lib/validators'
+import { rateLimit, createRateLimitResponse, rateLimits } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
+    const limit = rateLimit(request, rateLimits.auth)
+    if (limit.limited) {
+      return createRateLimitResponse(limit.resetTime)
+    }
+
     const body = await request.json()
     const validation = resetPasswordSchema.safeParse(body)
 
@@ -73,10 +79,16 @@ export async function POST(request: NextRequest) {
       where: { userId: user.id }
     })
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: 'Пароль успешно изменён'
     })
+
+    response.headers.set('X-RateLimit-Limit', rateLimits.auth.maxRequests.toString())
+    response.headers.set('X-RateLimit-Remaining', limit.remaining.toString())
+    response.headers.set('X-RateLimit-Reset', limit.resetTime.toString())
+
+    return response
   } catch (error) {
     console.error('Reset password error:', error)
     return NextResponse.json(
