@@ -48,6 +48,34 @@ interface RobotState {
   status: 'idle' | 'moving' | 'delivering' | 'charging' | 'error'
 }
 
+interface RobotConfig {
+  id: string
+  name: string
+  color: string
+  startPosition: { lat: number; lon: number }
+}
+
+interface MultiRobotState {
+  id: string
+  name: string
+  color: string
+  position: { lat: number; lon: number }
+  battery: number
+  speed: number
+  status: 'idle' | 'moving' | 'paused' | 'error' | 'charging'
+  currentTask?: string
+  progress: number
+}
+
+interface MultiRobotSession {
+  id: string
+  scenarioId: string
+  robots: MultiRobotState[]
+  startTime: number
+  status: 'preparing' | 'in_progress' | 'completed' | 'failed' | 'cancelled'
+  progress: number
+}
+
 interface SensorData {
   gps: { lat: number; lon: number; altitude: number; accuracy: number }
   lidar: { distances: number[]; angles: number[]; timestamp: number }
@@ -76,7 +104,7 @@ let robotState: RobotState = {
 // Generate simulated sensor data
 function generateSensorData(): SensorData {
   const now = Date.now()
-  
+
   // Simulate GPS data
   const gps = {
     lat: 55.7558 + Math.sin(now / 10000) * 0.001,
@@ -84,7 +112,7 @@ function generateSensorData(): SensorData {
     altitude: 150 + Math.random() * 5,
     accuracy: 2 + Math.random() * 3
   }
-  
+
   // Simulate Lidar data (360 degrees scan)
   const lidarDistances: number[] = []
   const lidarAngles: number[] = []
@@ -93,7 +121,7 @@ function generateSensorData(): SensorData {
     lidarDistances.push(5 + Math.random() * 20)
   }
   const lidar = { distances: lidarDistances, angles: lidarAngles, timestamp: now }
-  
+
   // Camera feeds (placeholder URLs)
   const cameras = {
     front: `/api/camera/front?t=${now}`,
@@ -101,13 +129,13 @@ function generateSensorData(): SensorData {
     left: `/api/camera/left?t=${now}`,
     right: `/api/camera/right?t=${now}`
   }
-  
+
   // Wheel encoders
   const encoders = {
     leftWheel: Math.floor(now / 100) % 10000,
     rightWheel: Math.floor(now / 100 + Math.random() * 100) % 10000
   }
-  
+
   // IMU data
   const imu = {
     acceleration: {
@@ -121,8 +149,51 @@ function generateSensorData(): SensorData {
       z: Math.sin(now / 3000) * 0.02
     }
   }
-  
+
   return { gps, lidar, cameras, encoders, imu }
+}
+
+// Generate multi-robot state updates
+function updateMultiRobotState() {
+  if (!multiRobotSession) return
+
+  const now = Date.now()
+  const elapsed = (now - multiRobotSession.startTime) / 1000 // seconds
+
+  multiRobotSession.robots = multiRobotSession.robots.map(robot => {
+    if (robot.status !== 'moving') return robot
+
+    // Simulate robot movement
+    const speed = 0.0001 // degrees per second
+    const latOffset = Math.sin(elapsed / 10) * speed * elapsed
+    const lonOffset = Math.cos(elapsed / 10) * speed * elapsed
+
+    // Simulate battery drain
+    const newBattery = Math.max(0, robot.battery - 0.01)
+
+    // Simulate progress
+    const newProgress = Math.min(100, robot.progress + 0.1)
+
+    return {
+      ...robot,
+      position: {
+        lat: robot.position.lat + latOffset,
+        lon: robot.position.lon + lonOffset
+      },
+      battery: newBattery,
+      progress: newProgress,
+      speed: 1.5 + Math.random() * 0.5, // m/s
+      status: newBattery <= 0 ? 'error' : newProgress >= 100 ? 'idle' : 'moving'
+    }
+  })
+
+  // Update session progress
+  const avgProgress = multiRobotSession.robots.reduce((sum, r) => sum + r.progress, 0) / multiRobotSession.robots.length
+  multiRobotSession.progress = avgProgress
+
+  if (avgProgress >= 100) {
+    multiRobotSession.status = 'completed'
+  }
 }
 
 // Update robot state
@@ -160,7 +231,10 @@ function updateRobotState() {
 }
 
 // Store connected clients
-const clients = new Map<string, { id: string; type: 'simulator' | 'controller' | 'viewer' }>()
+const clients = new Map<string, { id: string; type: 'simulator' | 'controller' | 'viewer' | 'multi-robot-viewer' }>()
+
+// Multi-robot session state
+let multiRobotSession: MultiRobotSession | null = null
 
 // Broadcast sensor data periodically
 const broadcastInterval = setInterval(() => {
@@ -168,6 +242,13 @@ const broadcastInterval = setInterval(() => {
     updateRobotState()
     const sensorData = generateSensorData()
     io.emit('sensor-data', { sensorData, robotState, timestamp: Date.now() })
+
+    // Update multi-robot state
+    updateMultiRobotState()
+    if (multiRobotSession) {
+      io.emit('multi-robot-update', multiRobotSession.robots)
+      io.emit('multi-session-update', multiRobotSession)
+    }
   } catch (error) {
     log('error', 'Error broadcasting sensor data', error)
   }
@@ -322,6 +403,152 @@ io.on('connection', (socket) => {
     }
 
     socket.emit('api-response', { requestId: data.params.requestId, ...response })
+  })
+
+  // Multi-robot simulation commands
+  socket.on('multi-robot-start', (data: { scenarioId: string; robots: RobotConfig[] }) => {
+    try {
+      log('info', 'Starting multi-robot session', data)
+
+      // Create new session
+      multiRobotSession = {
+        id: `session-${Date.now()}`,
+        scenarioId: data.scenarioId,
+        startTime: Date.now(),
+        status: 'in_progress',
+        progress: 0,
+        robots: data.robots.map(robot => ({
+          id: robot.id,
+          name: robot.name,
+          color: robot.color,
+          position: { ...robot.startPosition },
+          battery: 100,
+          speed: 0,
+          status: 'moving',
+          progress: 0
+        }))
+      }
+
+      // Notify all multi-robot viewers
+      io.emit('multi-session-update', multiRobotSession)
+      io.emit('multi-robot-update', multiRobotSession.robots)
+
+      socket.emit('multi-session-started', { sessionId: multiRobotSession.id })
+      log('info', `Multi-robot session started: ${multiRobotSession.id}`)
+    } catch (error) {
+      log('error', 'Error starting multi-robot session', error)
+      socket.emit('error', { message: 'Failed to start multi-robot session' })
+    }
+  })
+
+  socket.on('multi-robot-command', (data: { robotId: string; command: string; data?: Record<string, unknown> }) => {
+    try {
+      if (!multiRobotSession) {
+        socket.emit('error', { message: 'No active multi-robot session' })
+        return
+      }
+
+      const robot = multiRobotSession.robots.find(r => r.id === data.robotId)
+      if (!robot) {
+        socket.emit('error', { message: `Robot not found: ${data.robotId}` })
+        return
+      }
+
+      log('info', `Multi-robot command: ${data.command} for robot ${data.robotId}`)
+
+      switch (data.command) {
+        case 'pause':
+          robot.status = 'paused'
+          robot.speed = 0
+          break
+        case 'resume':
+          robot.status = 'moving'
+          robot.speed = 1.5
+          break
+        case 'stop':
+          robot.status = 'idle'
+          robot.speed = 0
+          break
+        case 'return_to_base':
+          robot.currentTask = 'returning'
+          break
+        default:
+          log('warn', `Unknown multi-robot command: ${data.command}`)
+      }
+
+      // Broadcast update
+      io.emit('multi-robot-update', multiRobotSession.robots)
+      io.emit('multi-session-update', multiRobotSession)
+    } catch (error) {
+      log('error', 'Error processing multi-robot command', error)
+      socket.emit('error', { message: 'Failed to process multi-robot command' })
+    }
+  })
+
+  socket.on('multi-broadcast-command', (data: { command: string; data?: Record<string, unknown> }) => {
+    try {
+      if (!multiRobotSession) {
+        socket.emit('error', { message: 'No active multi-robot session' })
+        return
+      }
+
+      log('info', `Broadcast command: ${data.command}`)
+
+      multiRobotSession.robots = multiRobotSession.robots.map(robot => {
+        switch (data.command) {
+          case 'pause':
+            return { ...robot, status: 'paused' as const, speed: 0 }
+          case 'resume':
+            return { ...robot, status: 'moving' as const, speed: 1.5 }
+          case 'stop':
+            return { ...robot, status: 'idle' as const, speed: 0 }
+          case 'return_to_base':
+            return { ...robot, currentTask: 'returning' }
+          default:
+            return robot
+        }
+      })
+
+      // Broadcast update
+      io.emit('multi-robot-update', multiRobotSession.robots)
+      io.emit('multi-session-update', multiRobotSession)
+    } catch (error) {
+      log('error', 'Error processing broadcast command', error)
+      socket.emit('error', { message: 'Failed to process broadcast command' })
+    }
+  })
+
+  socket.on('multi-robot-stop', (data: { sessionId?: string }) => {
+    try {
+      if (!multiRobotSession) {
+        socket.emit('error', { message: 'No active multi-robot session' })
+        return
+      }
+
+      log('info', 'Stopping multi-robot session', data)
+
+      // Stop all robots
+      multiRobotSession.robots = multiRobotSession.robots.map(robot => ({
+        ...robot,
+        status: 'idle' as const,
+        speed: 0
+      }))
+
+      multiRobotSession.status = 'cancelled'
+
+      // Broadcast update
+      io.emit('multi-robot-update', multiRobotSession.robots)
+      io.emit('multi-session-update', multiRobotSession)
+
+      // Clear session
+      multiRobotSession = null
+
+      socket.emit('multi-session-stopped')
+      log('info', 'Multi-robot session stopped')
+    } catch (error) {
+      log('error', 'Error stopping multi-robot session', error)
+      socket.emit('error', { message: 'Failed to stop multi-robot session' })
+    }
   })
 
   socket.on('disconnect', () => {
