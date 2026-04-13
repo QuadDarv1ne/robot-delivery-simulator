@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -85,11 +85,8 @@ export function RouteMapEditor({
   const [selectedPoint, setSelectedPoint] = useState<number | null>(null)
   const [editMode, setEditMode] = useState<'route' | 'obstacle'>('route')
   const [newObstacleType, setNewObstacleType] = useState<Obstacle['type']>('pedestrian')
-  const [isClient, setIsClient] = useState(false)
-
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
+  // Initialize as true only on client-side (prevents SSR mismatch)
+  const [isClient] = useState(() => typeof window !== 'undefined')
 
   const handleMapClick = useCallback((e: any) => {
     const { lat, lng } = e.latlng
