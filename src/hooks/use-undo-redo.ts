@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 
 interface UseUndoRedoReturn<T> {
   state: T
@@ -14,6 +14,9 @@ export function useUndoRedo<T>(initialState: T, maxHistory: number = 20): UseUnd
   const [state, setState] = useState<T>(initialState)
   const [past, setPast] = useState<T[]>([])
   const [future, setFuture] = useState<T[]>([])
+  
+  const currentStateRef = useRef(state)
+  currentStateRef.current = state
 
   const handleSetState = useCallback((newState: T | ((prev: T) => T)) => {
     setState(prevState => {
@@ -27,8 +30,8 @@ export function useUndoRedo<T>(initialState: T, maxHistory: number = 20): UseUnd
       }
 
       // Сохраняем текущее состояние в историю
-      setPast(past => {
-        const newHistory = [...past, prevState]
+      setPast(p => {
+        const newHistory = [...p, prevState]
         // Ограничиваем размер истории
         return newHistory.slice(-maxHistory)
       })
@@ -47,7 +50,7 @@ export function useUndoRedo<T>(initialState: T, maxHistory: number = 20): UseUnd
       const newPast = past.slice(0, -1)
 
       setState(currentState => {
-        setFuture(future => [currentState, ...future])
+        setFuture(f => [currentState, ...f])
         return previous
       })
 
@@ -63,7 +66,7 @@ export function useUndoRedo<T>(initialState: T, maxHistory: number = 20): UseUnd
       const newFuture = future.slice(1)
 
       setState(currentState => {
-        setPast(past => [...past, currentState])
+        setPast(p => [...p, currentState])
         return next
       })
 

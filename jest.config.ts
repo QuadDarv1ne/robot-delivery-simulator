@@ -54,7 +54,7 @@ const config: Config = {
       displayName: '🪝 Hooks',
       preset: 'ts-jest',
       testEnvironment: 'jsdom',
-      testMatch: ['<rootDir>/tests/hooks.test.ts'],
+      testMatch: ['<rootDir>/tests/hooks.test.ts', '<rootDir>/tests/use-undo-redo.test.ts'],
       transform: {
         '^.+\\.tsx?$': ['ts-jest', {
           tsconfig: {
