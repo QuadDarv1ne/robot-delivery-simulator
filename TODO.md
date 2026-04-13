@@ -73,12 +73,13 @@
 - [x] Добавить e2e тесты для критических путей
 - [x] Добавить обработку ошибок в API endpoints (algorithms, scenarios, user/profile, scenarios/[id])
 - [x] Настроить CI pipeline для автотестов (lint, build, test, e2e, security)
+- [x] Добавить ROS2 Bridge с поддержкой rosbridge_suite протокола
 
 #### Фичи из roadmap
 - [x] Система лидерборда (пагинация, skeleton loading, toast errors)
 - [ ] Редактор пользовательских сценариев
 - [x] Мульти-роботная симуляция (серверная часть)
-- [ ] Поддержка ROS2 bridge
+- [x] Поддержка ROS2 bridge (rosbridge_suite совместимость)
 - [ ] Полная интеграция Unity WebGL
 - [ ] Мобильное приложение-компаньон
 - [ ] AI-уроки по обходу препятствий

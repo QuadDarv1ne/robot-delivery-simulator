@@ -48,6 +48,7 @@ import { Leaderboard } from '@/components/leaderboard'
 import { AlgorithmEditor } from '@/components/algorithm-editor'
 import { ScenarioEditor } from '@/components/scenario-editor'
 import { MultiRobotPanel } from '@/components/multi-robot-panel'
+import { ROS2BridgePanel } from '@/components/ros2-bridge-panel'
 import { User as UserType } from '@/lib/auth-context'
 import { useSimulator, type RobotState, type SensorData } from '@/hooks/use-simulator'
 import { LidarView } from '@/components/simulator/lidar-view'
@@ -454,37 +455,7 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
               </TabsContent>
             </Tabs>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2"><Settings className="w-4 h-4" />ROS / ROS2</CardTitle>
-                <CardDescription>Интеграция с внешними системами</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-muted/50 p-3 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2"><div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /><span className="text-xs font-medium">ROS Bridge</span></div>
-                    <div className="text-xs text-muted-foreground">ws://localhost:9090</div>
-                  </div>
-                  <div className="bg-muted/50 p-3 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2"><div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" /><span className="text-xs font-medium">WebSocket</span></div>
-                    <div className="text-xs text-muted-foreground">ws://localhost:3003</div>
-                  </div>
-                </div>
-                <Separator />
-                <div className="space-y-2">
-                  <div className="text-xs font-medium">Топики</div>
-                  <ScrollArea className="h-24">
-                    <div className="space-y-1 text-xs">
-                      {['/robot/gps', '/robot/lidar', '/robot/camera', '/robot/imu', '/robot/cmd_vel'].map((topic) => (
-                        <div key={topic} className="flex items-center gap-2 text-muted-foreground bg-muted/30 px-2 py-1 rounded">
-                          <ChevronRight className="w-3 h-3" /><code>{topic}</code>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              </CardContent>
-            </Card>
+            <ROS2BridgePanel />
           </div>
         </div>
       </main>
