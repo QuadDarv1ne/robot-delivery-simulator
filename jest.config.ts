@@ -6,7 +6,7 @@ const config: Config = {
       displayName: '🔧 API',
       preset: 'ts-jest',
       testEnvironment: 'node',
-      testMatch: ['<rootDir>/tests/api.test.ts'],
+      testMatch: ['<rootDir>/tests/api.test.ts', '<rootDir>/tests/api-error.test.ts'],
       transform: {
         '^.+\\.tsx?$': ['ts-jest', {
           tsconfig: {
