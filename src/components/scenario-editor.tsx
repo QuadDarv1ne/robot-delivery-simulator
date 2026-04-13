@@ -1,7 +1,6 @@
-'use client'
-
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
+import { z } from 'zod'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -26,6 +25,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useUndoRedo } from '@/hooks/use-undo-redo'
+import { useLocalStorage } from '@/hooks/use-local-storage'
 import {
   MapPin,
   Plus,
@@ -46,8 +47,18 @@ import {
   Filter,
   Share2,
   Navigation,
-  Route
+  Route,
+  Shield,
+  Download,
+  Upload,
+  Play,
+  Bot,
+  Undo2,
+  Redo2,
+  Map
 } from 'lucide-react'
+import { RouteMapEditor } from '@/components/route-map-editor'
+import { ScenarioTestPanel } from '@/components/scenario-test-panel'
 
 interface Point {
   lat: number
@@ -71,6 +82,10 @@ interface Scenario {
   timeLimit: number
   weather: string
   traffic: string
+  robotType: string
+  robotCount: number
+  cargoCapacity: number
+  cargoFragile: boolean
   startPoint: string
   endPoint: string
   waypoints: string
@@ -83,6 +98,7 @@ interface Scenario {
     id: string
     name: string
   }
+  _draftTimestamp?: string
 }
 
 const DEFAULT_SCENARIO = {
@@ -93,6 +109,10 @@ const DEFAULT_SCENARIO = {
   timeLimit: 300,
   weather: 'sunny',
   traffic: 'low',
+  robotType: 'standard',
+  robotCount: 1,
+  cargoCapacity: 10.0,
+  cargoFragile: false,
   startPoint: JSON.stringify({ lat: 55.7558, lon: 37.6173, name: 'Стартовая точка' }),
   endPoint: JSON.stringify({ lat: 55.7522, lon: 37.6156, name: 'Точка доставки' }),
   waypoints: '[]',
@@ -100,10 +120,21 @@ const DEFAULT_SCENARIO = {
   isPublic: true
 }
 
+const scenarioFormSchema = z.object({
+  name: z.string().min(2, 'Название должно содержать минимум 2 символа'),
+  description: z.string().optional(),
+  difficulty: z.enum(['easy', 'medium', 'hard']),
+  distance: z.number().positive('Расстояние должно быть больше 0'),
+  timeLimit: z.number().positive('Лимит времени должен быть больше 0'),
+  weather: z.enum(['sunny', 'rainy', 'snowy']),
+  traffic: z.enum(['low', 'medium', 'high']),
+  isPublic: z.boolean()
+})
+
 export function ScenarioEditor() {
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null)
-  const [formData, setFormData] = useState(DEFAULT_SCENARIO)
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
@@ -116,8 +147,85 @@ export function ScenarioEditor() {
   const [totalPages, setTotalPages] = useState(0)
   const [totalItems, setTotalItems] = useState(0)
   const [showRouteEditor, setShowRouteEditor] = useState(false)
+  const [showRoutePreview, setShowRoutePreview] = useState(false)
   const [waypoints, setWaypoints] = useState<Point[]>([])
+  const [obstacles, setObstacles] = useState<Obstacle[]>([])
+  const [showTestPanel, setShowTestPanel] = useState(false)
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Undo/Redo для формы
+  const {
+    state: formData,
+    setState: setFormData,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    clearHistory
+  } = useUndoRedo(DEFAULT_SCENARIO)
+
+  // Горячие клавиши для undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        undo()
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault()
+        redo()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [undo, redo])
+
+  // Автосохранение черновика
+  const [draftScenario, setDraftScenarioState] = useLocalStorage<any>('scenario-editor-draft', null)
+  const [draftTimestamp, setDraftTimestamp] = useState<string | null>(null)
+  const autoSaveRef = useRef<NodeJS.Timeout | null>(null)
+
+  const setDraftScenario = (data: any) => {
+    setDraftScenarioState(data)
+  }
+
+  // Автосохранение при изменении formData (debounced)
+  useEffect(() => {
+    if (autoSaveRef.current) {
+      clearTimeout(autoSaveRef.current)
+    }
+
+    autoSaveRef.current = setTimeout(() => {
+      if (showEditDialog && formData.name) {
+        setDraftScenarioState({
+          ...formData,
+          _draftTimestamp: new Date().toISOString()
+        })
+        setDraftTimestamp(new Date().toISOString())
+      }
+    }, 2000) // Автосохранение через 2 секунды после последнего изменения
+
+    return () => {
+      if (autoSaveRef.current) {
+        clearTimeout(autoSaveRef.current)
+      }
+    }
+  }, [formData, showEditDialog])
+
+  // Восстановление черновика при открытии редактора
+  const handleRestoreDraft = () => {
+    if (draftScenario && !draftScenario.id) {
+      setFormData(draftScenario)
+      toast.success('Черновик восстановлен')
+    }
+  }
+
+  // Очистка черновика после сохранения
+  const handleClearDraft = () => {
+    setDraftScenarioState(null)
+    setDraftTimestamp(null)
+  }
 
   useEffect(() => {
     fetchScenarios()
@@ -202,6 +310,10 @@ export function ScenarioEditor() {
       timeLimit: scenario.timeLimit,
       weather: scenario.weather,
       traffic: scenario.traffic,
+      robotType: scenario.robotType || 'standard',
+      robotCount: scenario.robotCount || 1,
+      cargoCapacity: scenario.cargoCapacity || 10.0,
+      cargoFragile: scenario.cargoFragile || false,
       startPoint: scenario.startPoint,
       endPoint: scenario.endPoint,
       waypoints: scenario.waypoints,
@@ -213,10 +325,43 @@ export function ScenarioEditor() {
   }
 
   const handleSave = async () => {
-    if (!formData.name.trim()) {
-      toast.error('Введите название сценария')
+    // Клиентская валидация
+    const validationResult = scenarioFormSchema.safeParse({
+      name: formData.name,
+      description: formData.description,
+      difficulty: formData.difficulty,
+      distance: formData.distance,
+      timeLimit: formData.timeLimit,
+      weather: formData.weather,
+      traffic: formData.traffic,
+      isPublic: formData.isPublic
+    })
+
+    if (!validationResult.success) {
+      const errors: Record<string, string> = {}
+      validationResult.error.issues.forEach((issue) => {
+        if (issue.path[0]) {
+          errors[issue.path[0] as string] = issue.message
+        }
+      })
+      setFormErrors(errors)
+      toast.error('Пожалуйста, исправьте ошибки в форме')
       return
     }
+
+    // Валидация JSON полей
+    try {
+      JSON.parse(formData.startPoint)
+      JSON.parse(formData.endPoint)
+      JSON.parse(formData.waypoints)
+      JSON.parse(formData.obstacles)
+    } catch (error) {
+      toast.error('Ошибка в JSON данных сценария')
+      return
+    }
+
+    // Очистка ошибок
+    setFormErrors({})
 
     setIsSaving(true)
     try {
@@ -235,6 +380,7 @@ export function ScenarioEditor() {
       if (response.ok) {
         await fetchScenarios()
         setShowEditDialog(false)
+        handleClearDraft()
         toast.success(isNewScenario ? 'Сценарий создан' : 'Сценарий обновлён')
       } else {
         const data = await response.json()
@@ -302,39 +448,157 @@ export function ScenarioEditor() {
     fetchScenarios()
   }
 
+  const handleExport = (scenario: Scenario) => {
+    try {
+      const scenarioData = {
+        name: scenario.name,
+        description: scenario.description,
+        difficulty: scenario.difficulty,
+        distance: scenario.distance,
+        timeLimit: scenario.timeLimit,
+        weather: scenario.weather,
+        traffic: scenario.traffic,
+        robotType: scenario.robotType || 'standard',
+        robotCount: scenario.robotCount || 1,
+        cargoCapacity: scenario.cargoCapacity || 10.0,
+        cargoFragile: scenario.cargoFragile || false,
+        startPoint: JSON.parse(scenario.startPoint),
+        endPoint: JSON.parse(scenario.endPoint),
+        waypoints: JSON.parse(scenario.waypoints),
+        obstacles: JSON.parse(scenario.obstacles),
+        isPublic: scenario.isPublic,
+        version: '1.1.0',
+        exportedAt: new Date().toISOString()
+      }
+
+      const blob = new Blob([JSON.stringify(scenarioData, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${scenario.name.replace(/[^a-zA-Z0-9а-яА-ЯёЁ\s-]/g, '') || 'scenario'}_export.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      toast.success('Сценарий экспортирован')
+    } catch (error) {
+      console.error('Export error:', error)
+      toast.error('Ошибка экспорта сценария')
+    }
+  }
+
+  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string
+        const importedData = JSON.parse(content)
+
+        // Валидация структуры
+        if (!importedData.name || !importedData.difficulty) {
+          toast.error('Неверный формат файла сценария')
+          return
+        }
+
+        // Заполнение формы импортированными данными
+        setFormData({
+          name: importedData.name || '',
+          description: importedData.description || '',
+          difficulty: importedData.difficulty || 'medium',
+          distance: importedData.distance || 1000,
+          timeLimit: importedData.timeLimit || 300,
+          weather: importedData.weather || 'sunny',
+          traffic: importedData.traffic || 'low',
+          robotType: importedData.robotType || 'standard',
+          robotCount: importedData.robotCount || 1,
+          cargoCapacity: importedData.cargoCapacity || 10.0,
+          cargoFragile: importedData.cargoFragile || false,
+          startPoint: JSON.stringify(importedData.startPoint || { lat: 55.7558, lon: 37.6173, name: 'Стартовая точка' }),
+          endPoint: JSON.stringify(importedData.endPoint || { lat: 55.7522, lon: 37.6156, name: 'Точка доставки' }),
+          waypoints: JSON.stringify(importedData.waypoints || []),
+          obstacles: JSON.stringify(importedData.obstacles || []),
+          isPublic: importedData.isPublic !== undefined ? importedData.isPublic : true
+        })
+
+        setSelectedScenario(null)
+        setIsNewScenario(true)
+        setShowEditDialog(true)
+        toast.success('Сценарий импортирован')
+      } catch (error) {
+        console.error('Import error:', error)
+        toast.error('Ошибка импорта: неверный формат файла')
+      }
+    }
+    reader.readAsText(file)
+
+    // Сброс input для повторного импорта того же файла
+    event.target.value = ''
+  }
+
+  const handleLaunchInSimulator = (scenario: Scenario) => {
+    try {
+      // Конвертация Scenario в DeliveryScenario формат
+      const deliveryScenario = {
+        id: scenario.id,
+        name: scenario.name,
+        description: scenario.description || '',
+        difficulty: scenario.difficulty as 'easy' | 'medium' | 'hard',
+        distance: scenario.distance,
+        timeLimit: scenario.timeLimit,
+        weather: scenario.weather as 'sunny' | 'rainy' | 'snowy',
+        traffic: scenario.traffic as 'low' | 'medium' | 'high',
+        robotType: scenario.robotType || 'standard',
+        robotCount: scenario.robotCount || 1,
+        cargoCapacity: scenario.cargoCapacity || 10.0,
+        cargoFragile: scenario.cargoFragile || false,
+        startPoint: JSON.parse(scenario.startPoint),
+        endPoint: JSON.parse(scenario.endPoint),
+        waypoints: JSON.parse(scenario.waypoints),
+        obstacles: JSON.parse(scenario.obstacles),
+        isPublic: scenario.isPublic,
+        playsCount: scenario.playsCount,
+        avgScore: scenario.avgScore,
+        createdAt: scenario.createdAt,
+        creator: scenario.creator
+      }
+
+      // Отправка события для simulator-content
+      window.dispatchEvent(new CustomEvent('launchSimulatorScenario', {
+        detail: deliveryScenario
+      }))
+
+      toast.success('Сценарий загружен в симулятор! Переключитесь на вкладку "Симулятор"')
+    } catch (error) {
+      console.error('Launch in simulator error:', error)
+      toast.error('Ошибка запуска в симуляторе')
+    }
+  }
+
   const handleOpenRouteEditor = () => {
     try {
-      const parsed = JSON.parse(formData.waypoints || '[]')
-      setWaypoints(Array.isArray(parsed) ? parsed : [])
+      const parsedWaypoints = JSON.parse(formData.waypoints || '[]')
+      const parsedObstacles = JSON.parse(formData.obstacles || '[]')
+      setWaypoints(Array.isArray(parsedWaypoints) ? parsedWaypoints : [])
+      setObstacles(Array.isArray(parsedObstacles) ? parsedObstacles : [])
     } catch {
       setWaypoints([])
+      setObstacles([])
     }
     setShowRouteEditor(true)
   }
 
-  const handleSaveRouteEditor = () => {
-    setFormData({ ...formData, waypoints: JSON.stringify(waypoints) })
+  const handleSaveRouteEditor = (points: Point[], obstacles: Obstacle[]) => {
+    setFormData({ 
+      ...formData, 
+      waypoints: JSON.stringify(points),
+      obstacles: JSON.stringify(obstacles)
+    })
+    setWaypoints(points)
     setShowRouteEditor(false)
-    toast.success('Маршрут обновлён')
-  }
-
-  const handleAddWaypoint = () => {
-    const newPoint: Point = {
-      lat: 55.75 + Math.random() * 0.01,
-      lon: 37.61 + Math.random() * 0.01,
-      name: `Точка ${waypoints.length + 1}`
-    }
-    setWaypoints([...waypoints, newPoint])
-  }
-
-  const handleUpdateWaypoint = (index: number, field: keyof Point, value: string | number) => {
-    const updated = [...waypoints]
-    updated[index] = { ...updated[index], [field]: value }
-    setWaypoints(updated)
-  }
-
-  const handleDeleteWaypoint = (index: number) => {
-    setWaypoints(waypoints.filter((_, i) => i !== index))
+    toast.success('Маршрут и препятствия обновлены')
   }
 
   const getDifficultyBadge = (difficulty: string) => {
@@ -370,6 +634,16 @@ export function ScenarioEditor() {
               Сценарии доставки
             </CardTitle>
             <div className="flex gap-1">
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleImport}
+                className="hidden"
+                id="scenario-import"
+              />
+              <Button variant="ghost" size="icon" onClick={() => document.getElementById('scenario-import')?.click()}>
+                <Upload className="w-4 h-4" />
+              </Button>
               <Button variant="ghost" size="icon" onClick={handleNewScenario}>
                 <Plus className="w-4 h-4" />
               </Button>
@@ -446,6 +720,24 @@ export function ScenarioEditor() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="h-7 w-7 text-green-600"
+                          onClick={() => handleLaunchInSimulator(scenario)}
+                          title="Запустить в симуляторе"
+                        >
+                          <Play className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => handleExport(scenario)}
+                          title="Экспортировать сценарий"
+                        >
+                          <Download className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-7 w-7"
                           onClick={() => handleClone(scenario)}
                           disabled={isCloning}
@@ -519,15 +811,76 @@ export function ScenarioEditor() {
       </Card>
 
       {/* Editor Form */}
+      {draftScenario && draftTimestamp && !showEditDialog && (
+        <Card className="lg:col-span-2 border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
+          <CardContent className="pt-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Save className="w-5 h-5 text-yellow-600" />
+                <div>
+                  <p className="font-medium text-sm">Найден черновик</p>
+                  <p className="text-xs text-muted-foreground">
+                    Сохранён {new Date(draftTimestamp).toLocaleString('ru-RU')}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDraftScenarioState(null)}
+                >
+                  Удалить
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setFormData(draftScenario)
+                    setShowEditDialog(true)
+                    toast.success('Черновик восстановлен')
+                  }}
+                >
+                  Восстановить
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="lg:col-span-2">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Edit className="w-5 h-5" />
-            Редактор сценария
-          </CardTitle>
-          <CardDescription>
-            Создавайте и редактируйте миссии доставки для студентов
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Edit className="w-5 h-5" />
+                Редактор сценария
+              </CardTitle>
+              <CardDescription>
+                Создавайте и редактируйте миссии доставки для студентов
+              </CardDescription>
+            </div>
+            <div className="flex gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={undo}
+                disabled={!canUndo}
+                title="Отменить (Ctrl+Z)"
+              >
+                <Undo2 className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={redo}
+                disabled={!canRedo}
+                title="Повторить (Ctrl+Y)"
+              >
+                <Redo2 className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -537,9 +890,16 @@ export function ScenarioEditor() {
                 <Label>Название *</Label>
                 <Input
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, name: e.target.value })
+                    if (formErrors.name) setFormErrors({ ...formErrors, name: '' })
+                  }}
                   placeholder="Миссия: Доставка в центр"
+                  className={formErrors.name ? 'border-red-500' : ''}
                 />
+                {formErrors.name && (
+                  <p className="text-xs text-red-500">{formErrors.name}</p>
+                )}
               </div>
               
               <div className="space-y-2">
@@ -575,16 +935,30 @@ export function ScenarioEditor() {
                   <Input
                     type="number"
                     value={formData.distance}
-                    onChange={(e) => setFormData({ ...formData, distance: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, distance: parseInt(e.target.value) || 0 })
+                      if (formErrors.distance) setFormErrors({ ...formErrors, distance: '' })
+                    }}
+                    className={formErrors.distance ? 'border-red-500' : ''}
                   />
+                  {formErrors.distance && (
+                    <p className="text-xs text-red-500">{formErrors.distance}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Лимит времени (сек)</Label>
                   <Input
                     type="number"
                     value={formData.timeLimit}
-                    onChange={(e) => setFormData({ ...formData, timeLimit: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, timeLimit: parseInt(e.target.value) || 0 })
+                      if (formErrors.timeLimit) setFormErrors({ ...formErrors, timeLimit: '' })
+                    }}
+                    className={formErrors.timeLimit ? 'border-red-500' : ''}
                   />
+                  {formErrors.timeLimit && (
+                    <p className="text-xs text-red-500">{formErrors.timeLimit}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -633,6 +1007,69 @@ export function ScenarioEditor() {
 
               <Separator />
 
+              <div className="space-y-4">
+                <Label className="flex items-center gap-2">
+                  <Bot className="w-4 h-4" />
+                  Настройки робота
+                </Label>
+
+                <div className="space-y-2">
+                  <Label>Тип робота</Label>
+                  <Select
+                    value={formData.robotType}
+                    onValueChange={(value) => setFormData({ ...formData, robotType: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="standard">🤖 Стандартный</SelectItem>
+                      <SelectItem value="heavy">🏋️ Тяжёлый (до 20 кг)</SelectItem>
+                      <SelectItem value="compact">📦 Компактный</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Количество</Label>
+                    <Input
+                      type="number"
+                      value={formData.robotCount}
+                      onChange={(e) => setFormData({ ...formData, robotCount: parseInt(e.target.value) || 1 })}
+                      min="1"
+                      max="10"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Грузоподъёмность (кг)</Label>
+                    <Input
+                      type="number"
+                      value={formData.cargoCapacity}
+                      onChange={(e) => setFormData({ ...formData, cargoCapacity: parseFloat(e.target.value) || 10 })}
+                      min="1"
+                      max="50"
+                      step="0.5"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Хрупкий груз</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Требуется аккуратная доставка
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.cargoFragile}
+                    onCheckedChange={(checked) => setFormData({ ...formData, cargoFragile: checked })}
+                  />
+                </div>
+              </div>
+
+              <Separator />
+
               <div className="flex items-center justify-between">
                 <div>
                   <Label>Публичный сценарий</Label>
@@ -653,102 +1090,114 @@ export function ScenarioEditor() {
                   <Route className="w-4 h-4" />
                   Маршрут
                 </Label>
-                <Button variant="outline" className="w-full" onClick={handleOpenRouteEditor}>
-                  <Navigation className="w-4 h-4 mr-2" />
-                  Редактировать точки маршрута ({waypoints.length})
-                </Button>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" className="w-full" onClick={handleOpenRouteEditor}>
+                    <Navigation className="w-4 h-4 mr-2" />
+                    Редактировать
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setShowRoutePreview(true)}
+                    disabled={waypoints.length === 0}
+                  >
+                    <Map className="w-4 h-4 mr-2" />
+                    Предпросмотр
+                  </Button>
+                </div>
               </div>
 
               <Separator />
 
-              <Button className="w-full" onClick={handleSave} disabled={!formData.name.trim() || isSaving}>
-                {isSaving ? (
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4 mr-2" />
-                )}
-                Сохранить сценарий
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowTestPanel(!showTestPanel)}
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  {showTestPanel ? 'Скрыть тесты' : 'Тестировать'}
+                </Button>
+                <Button className="w-full" onClick={handleSave} disabled={!formData.name.trim() || isSaving}>
+                  {isSaving ? (
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Сохранить
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Test Panel */}
+      {showTestPanel && (
+        <ScenarioTestPanel
+          scenarioData={{
+            startPoint: formData.startPoint,
+            endPoint: formData.endPoint,
+            waypoints: formData.waypoints,
+            obstacles: formData.obstacles,
+            distance: formData.distance,
+            timeLimit: formData.timeLimit,
+            difficulty: formData.difficulty,
+            weather: formData.weather,
+            traffic: formData.traffic
+          }}
+        />
+      )}
+
       {/* Route Editor Dialog */}
       <Dialog open={showRouteEditor} onOpenChange={setShowRouteEditor}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-7xl h-[90vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Route className="w-5 h-5" />
-              Редактор маршрута
+              Визуальный редактор маршрута
             </DialogTitle>
             <DialogDescription>
-              Добавьте контрольные точки маршрута
+              Кликните на карту для добавления точек маршрута и препятствий
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 max-h-[400px] overflow-y-auto">
-            {waypoints.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
-                <Navigation className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>Нет точек маршрута</p>
-              </div>
-            ) : (
-              waypoints.map((point, index) => (
-                <Card key={index}>
-                  <CardContent className="p-3">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="shrink-0">#{index + 1}</Badge>
-                      <Input
-                        value={point.name}
-                        onChange={(e) => handleUpdateWaypoint(index, 'name', e.target.value)}
-                        placeholder="Название точки"
-                        className="flex-1"
-                      />
-                      <Input
-                        type="number"
-                        step="0.0001"
-                        value={point.lat}
-                        onChange={(e) => handleUpdateWaypoint(index, 'lat', parseFloat(e.target.value) || 0)}
-                        placeholder="Широта"
-                        className="w-28"
-                      />
-                      <Input
-                        type="number"
-                        step="0.0001"
-                        value={point.lon}
-                        onChange={(e) => handleUpdateWaypoint(index, 'lon', parseFloat(e.target.value) || 0)}
-                        placeholder="Долгота"
-                        className="w-28"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteWaypoint(index)}
-                        className="shrink-0"
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
+          <RouteMapEditor
+            initialPoints={waypoints}
+            initialObstacles={obstacles}
+            onSave={handleSaveRouteEditor}
+            onCancel={() => setShowRouteEditor(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
-          <Button variant="outline" className="w-full" onClick={handleAddWaypoint}>
-            <Plus className="w-4 h-4 mr-2" />
-            Добавить точку
-          </Button>
+      {/* Route Preview Dialog */}
+      <Dialog open={showRoutePreview} onOpenChange={setShowRoutePreview}>
+        <DialogContent className="max-w-7xl h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Map className="w-5 h-5" />
+              Предпросмотр маршрута
+            </DialogTitle>
+            <DialogDescription>
+              Так будет выглядеть маршрут в симуляции
+            </DialogDescription>
+          </DialogHeader>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRouteEditor(false)}>
-              Отмена
-            </Button>
-            <Button onClick={handleSaveRouteEditor}>
-              Сохранить
-            </Button>
-          </DialogFooter>
+          <RouteMapEditor
+            initialPoints={waypoints}
+            initialObstacles={obstacles}
+            onSave={(points, obstacles) => {
+              setWaypoints(points)
+              setObstacles(obstacles)
+              setFormData({
+                ...formData,
+                waypoints: JSON.stringify(points),
+                obstacles: JSON.stringify(obstacles)
+              })
+            }}
+            onCancel={() => setShowRoutePreview(false)}
+          />
         </DialogContent>
       </Dialog>
     </div>

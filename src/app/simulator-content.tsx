@@ -33,7 +33,8 @@ import {
   Trophy,
   RotateCw,
   RotateCcw as RotateLeft,
-  Square
+  Square,
+  Bot
 } from 'lucide-react'
 import {
   DeliveryScenario,
@@ -41,10 +42,13 @@ import {
   ScenarioSelector,
   DeliveryProgress
 } from '@/components/delivery-scenarios'
+import { DBScenarioSelector } from '@/components/db-scenario-selector'
 import { AnalyticsPanel } from '@/components/analytics-panel'
 import { Leaderboard } from '@/components/leaderboard'
 import { AlgorithmEditor } from '@/components/algorithm-editor'
 import { ScenarioEditor } from '@/components/scenario-editor'
+import { MultiRobotPanel } from '@/components/multi-robot-panel'
+import { ROS2BridgePanel } from '@/components/ros2-bridge-panel'
 import { User as UserType } from '@/lib/auth-context'
 import { useSimulator, type RobotState, type SensorData } from '@/hooks/use-simulator'
 import { LidarView } from '@/components/simulator/lidar-view'
@@ -77,6 +81,28 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
   const [deliverySession, setDeliverySession] = useState<DeliverySession | null>(null)
   const [activeView, setActiveView] = useState<'simulator' | 'map' | 'lidar3d' | 'scenarios' | 'leaderboard' | 'algorithms'>('simulator')
 
+  const handleSelectScenario = (scenario: DeliveryScenario) => {
+    setSelectedScenario(scenario)
+    setDeliverySession({
+      scenarioId: scenario.id, startTime: Date.now(), status: 'preparing',
+      progress: 0, currentWaypoint: 0, distanceTraveled: 0, timeElapsed: 0, collisions: 0, batteryUsed: 0
+    })
+  }
+
+  // Обработчик запуска сценария из редактора сценариев
+  useEffect(() => {
+    const handleLaunchScenario = (e: Event) => {
+      const scenario = (e as CustomEvent<DeliveryScenario>).detail
+      if (scenario) {
+        handleSelectScenario(scenario)
+        setActiveView('simulator')
+      }
+    }
+
+    window.addEventListener('launchSimulatorScenario', handleLaunchScenario)
+    return () => window.removeEventListener('launchSimulatorScenario', handleLaunchScenario)
+  }, [])
+
   const handleManualControl = useCallback((command: 'forward' | 'backward' | 'left' | 'right' | 'rotate-left' | 'rotate-right' | 'stop') => {
     const commands: Record<string, { velocity?: { x: number; y: number; z: number }; rotation?: { y: number } }> = {
       'forward': { velocity: { x: 0, y: 0, z: 0.5 } },
@@ -89,14 +115,6 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
     }
     sendCommand('move', commands[command])
   }, [sendCommand])
-
-  const handleSelectScenario = (scenario: DeliveryScenario) => {
-    setSelectedScenario(scenario)
-    setDeliverySession({
-      scenarioId: scenario.id, startTime: Date.now(), status: 'preparing',
-      progress: 0, currentWaypoint: 0, distanceTraveled: 0, timeElapsed: 0, collisions: 0, batteryUsed: 0
-    })
-  }
 
   const handleStartDelivery = () => {
     if (deliverySession) {
@@ -204,8 +222,8 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
                 <TabsTrigger value="map"><MapPin className="w-4 h-4 mr-2" />Карта</TabsTrigger>
                 <TabsTrigger value="lidar3d"><Layers className="w-4 h-4 mr-2" />3D Lidar</TabsTrigger>
                 <TabsTrigger value="scenarios"><Package className="w-4 h-4 mr-2" />Сценарии</TabsTrigger>
+                <TabsTrigger value="multirobot"><Bot className="w-4 h-4 mr-2" />Мульти-робот</TabsTrigger>
                 <TabsTrigger value="leaderboard"><Trophy className="w-4 h-4 mr-2" />Рейтинг</TabsTrigger>
-                <TabsTrigger value="algorithms"><Code className="w-4 h-4 mr-2" />Алгоритмы</TabsTrigger>
               </TabsList>
 
               <TabsContent value="simulator" className="mt-4">
@@ -336,6 +354,10 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
                 <Leaderboard currentUserId={user?.id} />
               </TabsContent>
 
+              <TabsContent value="multirobot" className="mt-4">
+                <MultiRobotPanel />
+              </TabsContent>
+
               <TabsContent value="scenarios" className="mt-4">
                 <ScenarioEditor />
               </TabsContent>
@@ -420,10 +442,10 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
 
               <TabsContent value="delivery">
                 {!selectedScenario ? (
-                  <Card>
-                    <CardHeader className="pb-2"><CardTitle className="text-sm">Сценарии доставки</CardTitle><CardDescription>Выберите миссию</CardDescription></CardHeader>
-                    <CardContent><ScenarioSelector onSelect={handleSelectScenario} selectedId={selectedScenario ? (selectedScenario as DeliveryScenario).id : undefined} /></CardContent>
-                  </Card>
+                  <DBScenarioSelector
+                    onSelect={handleSelectScenario}
+                    selectedId={selectedScenario ? (selectedScenario as DeliveryScenario).id : undefined}
+                  />
                 ) : (
                   <DeliveryProgress session={deliverySession} scenario={selectedScenario} onPause={handlePauseDelivery} onResume={handleStartDelivery} onReset={handleResetDelivery} onCancel={handleCancelDelivery} />
                 )}
@@ -447,37 +469,7 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
               </TabsContent>
             </Tabs>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2"><Settings className="w-4 h-4" />ROS / ROS2</CardTitle>
-                <CardDescription>Интеграция с внешними системами</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-muted/50 p-3 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2"><div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /><span className="text-xs font-medium">ROS Bridge</span></div>
-                    <div className="text-xs text-muted-foreground">ws://localhost:9090</div>
-                  </div>
-                  <div className="bg-muted/50 p-3 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2"><div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" /><span className="text-xs font-medium">WebSocket</span></div>
-                    <div className="text-xs text-muted-foreground">ws://localhost:3003</div>
-                  </div>
-                </div>
-                <Separator />
-                <div className="space-y-2">
-                  <div className="text-xs font-medium">Топики</div>
-                  <ScrollArea className="h-24">
-                    <div className="space-y-1 text-xs">
-                      {['/robot/gps', '/robot/lidar', '/robot/camera', '/robot/imu', '/robot/cmd_vel'].map((topic) => (
-                        <div key={topic} className="flex items-center gap-2 text-muted-foreground bg-muted/30 px-2 py-1 rounded">
-                          <ChevronRight className="w-3 h-3" /><code>{topic}</code>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              </CardContent>
-            </Card>
+            <ROS2BridgePanel />
           </div>
         </div>
       </main>

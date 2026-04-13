@@ -16,14 +16,43 @@ export async function GET(request: NextRequest) {
 
     const scenarios = await db.deliveryScenario.findMany({
       where,
-      include: {
-        creator: { select: { id: true, name: true, email: true } },
-        _count: { select: { deliveryResults: true } }
-      },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        difficulty: true,
+        distance: true,
+        timeLimit: true,
+        weather: true,
+        traffic: true,
+        robotType: true,
+        robotCount: true,
+        cargoCapacity: true,
+        cargoFragile: true,
+        startPoint: true,
+        endPoint: true,
+        waypoints: true,
+        obstacles: true,
+        isPublic: true,
+        playsCount: true,
+        avgScore: true,
+        createdAt: true,
+        creator: { select: { id: true, name: true } }
+      }
     })
 
-    return successResponse({ scenarios })
+    // Добавляем количество deliveryResults к каждому сценарию
+    const scenariosWithCounts = await Promise.all(
+      scenarios.map(async (scenario) => {
+        const count = await db.deliveryResult.count({
+          where: { scenarioId: scenario.id }
+        })
+        return { ...scenario, deliveryResultsCount: count }
+      })
+    )
+
+    return successResponse({ scenarios: scenariosWithCounts })
   } catch (error) {
     return handleApiError(error, 'Scenarios.GET')
   }
@@ -54,7 +83,7 @@ export async function POST(request: NextRequest) {
       return createErrorResponse({ message: 'Ошибка валидации', status: 400, context: 'Scenarios.POST', details: errors })
     }
 
-    const { name, description, difficulty, distance, timeLimit, weather, traffic, startPoint, endPoint, waypoints, obstacles, isPublic } = validation.data
+    const { name, description, difficulty, distance, timeLimit, weather, traffic, robotType, robotCount, cargoCapacity, cargoFragile, startPoint, endPoint, waypoints, obstacles, isPublic } = validation.data
 
     const scenario = await db.deliveryScenario.create({
       data: {
@@ -65,6 +94,10 @@ export async function POST(request: NextRequest) {
         timeLimit: timeLimit || 300,
         weather: weather || 'sunny',
         traffic: traffic || 'low',
+        robotType: robotType || 'standard',
+        robotCount: robotCount || 1,
+        cargoCapacity: cargoCapacity || 10.0,
+        cargoFragile: cargoFragile || false,
         startPoint,
         endPoint,
         waypoints,
