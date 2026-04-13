@@ -25,6 +25,7 @@ const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapCo
 const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false })
 const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false })
 const Polyline = dynamic(() => import('react-leaflet').then(mod => mod.Polyline), { ssr: false })
+const Circle = dynamic(() => import('react-leaflet').then(mod => mod.Circle), { ssr: false })
 const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false })
 const Tooltip = dynamic(() => import('react-leaflet').then(mod => mod.Tooltip), { ssr: false })
 const MapEvents = dynamic(() => import('react-leaflet').then(mod => {
@@ -115,7 +116,10 @@ export function RouteMapEditor({
 
   const handleUpdateWaypoint = (index: number, field: keyof Point, value: string | number) => {
     const updated = [...waypoints]
-    updated[index] = { ...updated[index], [field]: value }
+    updated[index] = {
+      ...updated[index],
+      [field]: field === 'lat' || field === 'lon' ? Number(value) : value
+    }
     setWaypoints(updated)
   }
 
@@ -131,6 +135,12 @@ export function RouteMapEditor({
 
   const handleDeleteObstacle = (id: string) => {
     setObstacles(obstacles.filter(obs => obs.id !== id))
+  }
+
+  const handleUpdateObstacleRadius = (id: string, radius: number) => {
+    setObstacles(obstacles.map(obs =>
+      obs.id === id ? { ...obs, radius } : obs
+    ))
   }
 
   const handleSave = () => {
@@ -220,10 +230,17 @@ export function RouteMapEditor({
                   <Marker
                     key={`point-${index}`}
                     position={[point.lat, point.lon]}
+                    draggable={true}
                     eventHandlers={{
                       click: (e) => {
                         L.DomEvent.stopPropagation(e)
                         setSelectedPoint(index)
+                      },
+                      dragend: (e) => {
+                        const marker = e.target
+                        const position = marker.getLatLng()
+                        handleUpdateWaypoint(index, 'lat', parseFloat(position.lat.toFixed(6)))
+                        handleUpdateWaypoint(index, 'lon', parseFloat(position.lng.toFixed(6)))
                       }
                     }}
                   >
@@ -232,6 +249,9 @@ export function RouteMapEditor({
                         <div className="font-semibold">{point.name}</div>
                         <div className="text-muted-foreground">
                           {point.lat.toFixed(6)}, {point.lon.toFixed(6)}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          🖱️ Перетащите для перемещения
                         </div>
                         {index === 0 && <Badge className="text-xs mt-1">Старт</Badge>}
                         {index === waypoints.length - 1 && waypoints.length > 1 && (
@@ -279,7 +299,7 @@ export function RouteMapEditor({
                         <div className="flex items-center gap-1">
                           <span>{getObstacleIcon(obstacle.type)}</span>
                           <span className={getObstacleColor(obstacle.type)}>
-                            {obstacle.type === 'pedestrian' ? 'Пешеход' : 
+                            {obstacle.type === 'pedestrian' ? 'Пешеход' :
                              obstacle.type === 'vehicle' ? 'Транспорт' : 'Строительство'}
                           </span>
                         </div>
@@ -290,6 +310,43 @@ export function RouteMapEditor({
                     </Tooltip>
                   </Marker>
                 ))}
+
+                {/* Зоны препятствий (круги радиуса) */}
+                {obstacles.map((obstacle) => {
+                  const getZoneColor = (type: string) => {
+                    switch (type) {
+                      case 'pedestrian': return '#eab308'
+                      case 'vehicle': return '#3b82f6'
+                      case 'construction': return '#f97316'
+                      default: return '#6b7280'
+                    }
+                  }
+
+                  return (
+                    <Circle
+                      key={`zone-${obstacle.id}`}
+                      center={[obstacle.position.lat, obstacle.position.lon]}
+                      radius={obstacle.radius}
+                      pathOptions={{
+                        color: getZoneColor(obstacle.type),
+                        fillColor: getZoneColor(obstacle.type),
+                        fillOpacity: 0.2,
+                        weight: 2,
+                        dashArray: '5, 5'
+                      }}
+                    >
+                      <Tooltip direction="top">
+                        <div className="text-xs">
+                          <div className="font-semibold">Зона: {
+                            obstacle.type === 'pedestrian' ? 'Пешеход' :
+                            obstacle.type === 'vehicle' ? 'Транспорт' : 'Строительство'
+                          }</div>
+                          <div>Радиус: {obstacle.radius}м</div>
+                        </div>
+                      </Tooltip>
+                    </Circle>
+                  )
+                })}
               </MapContainer>
 
               {/* Подсказка режима */}
@@ -435,11 +492,23 @@ export function RouteMapEditor({
                         <span className="text-lg">{getObstacleIcon(obstacle.type)}</span>
                         <div className="flex-1 min-w-0">
                           <div className={`text-xs font-medium ${getObstacleColor(obstacle.type)}`}>
-                            {obstacle.type === 'pedestrian' ? 'Пешеход' : 
+                            {obstacle.type === 'pedestrian' ? 'Пешеход' :
                              obstacle.type === 'vehicle' ? 'Транспорт' : 'Строительство'}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {obstacle.position.lat.toFixed(6)}, {obstacle.position.lon.toFixed(6)}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Label className="text-xs text-muted-foreground shrink-0">Радиус:</Label>
+                            <Input
+                              type="number"
+                              value={obstacle.radius}
+                              onChange={(e) => handleUpdateObstacleRadius(obstacle.id, parseInt(e.target.value) || 1)}
+                              className="h-6 w-16 text-xs"
+                              min="1"
+                              max="50"
+                            />
+                            <span className="text-xs text-muted-foreground">м</span>
                           </div>
                         </div>
                         <Button

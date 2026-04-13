@@ -142,7 +142,13 @@ model DeliveryScenario {
   // Environment
   weather     String   @default("sunny")  // sunny, rainy, snowy
   traffic     String   @default("low")    // low, medium, high
-  
+
+  // Robot settings (JSON)
+  robotType   String   @default("standard") // standard, heavy, compact
+  robotCount  Int      @default(1)
+  cargoCapacity Float   @default(10.0) // kg
+  cargoFragile Boolean  @default(false)
+
   // Route points (JSON)
   startPoint  String   // JSON: {lat, lon, name}
   endPoint    String   // JSON: {lat, lon, name}

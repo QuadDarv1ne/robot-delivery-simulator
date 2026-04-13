@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
+import { z } from 'zod'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -45,7 +46,11 @@ import {
   Share2,
   Navigation,
   Route,
-  Shield
+  Shield,
+  Download,
+  Upload,
+  Play,
+  Bot
 } from 'lucide-react'
 import { RouteMapEditor } from '@/components/route-map-editor'
 import { ScenarioTestPanel } from '@/components/scenario-test-panel'
@@ -72,6 +77,10 @@ interface Scenario {
   timeLimit: number
   weather: string
   traffic: string
+  robotType: string
+  robotCount: number
+  cargoCapacity: number
+  cargoFragile: boolean
   startPoint: string
   endPoint: string
   waypoints: string
@@ -94,6 +103,10 @@ const DEFAULT_SCENARIO = {
   timeLimit: 300,
   weather: 'sunny',
   traffic: 'low',
+  robotType: 'standard',
+  robotCount: 1,
+  cargoCapacity: 10.0,
+  cargoFragile: false,
   startPoint: JSON.stringify({ lat: 55.7558, lon: 37.6173, name: 'Стартовая точка' }),
   endPoint: JSON.stringify({ lat: 55.7522, lon: 37.6156, name: 'Точка доставки' }),
   waypoints: '[]',
@@ -101,10 +114,22 @@ const DEFAULT_SCENARIO = {
   isPublic: true
 }
 
+const scenarioFormSchema = z.object({
+  name: z.string().min(2, 'Название должно содержать минимум 2 символа'),
+  description: z.string().optional(),
+  difficulty: z.enum(['easy', 'medium', 'hard']),
+  distance: z.number().positive('Расстояние должно быть больше 0'),
+  timeLimit: z.number().positive('Лимит времени должен быть больше 0'),
+  weather: z.enum(['sunny', 'rainy', 'snowy']),
+  traffic: z.enum(['low', 'medium', 'high']),
+  isPublic: z.boolean()
+})
+
 export function ScenarioEditor() {
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null)
   const [formData, setFormData] = useState(DEFAULT_SCENARIO)
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
@@ -205,6 +230,10 @@ export function ScenarioEditor() {
       timeLimit: scenario.timeLimit,
       weather: scenario.weather,
       traffic: scenario.traffic,
+      robotType: scenario.robotType || 'standard',
+      robotCount: scenario.robotCount || 1,
+      cargoCapacity: scenario.cargoCapacity || 10.0,
+      cargoFragile: scenario.cargoFragile || false,
       startPoint: scenario.startPoint,
       endPoint: scenario.endPoint,
       waypoints: scenario.waypoints,
@@ -216,10 +245,43 @@ export function ScenarioEditor() {
   }
 
   const handleSave = async () => {
-    if (!formData.name.trim()) {
-      toast.error('Введите название сценария')
+    // Клиентская валидация
+    const validationResult = scenarioFormSchema.safeParse({
+      name: formData.name,
+      description: formData.description,
+      difficulty: formData.difficulty,
+      distance: formData.distance,
+      timeLimit: formData.timeLimit,
+      weather: formData.weather,
+      traffic: formData.traffic,
+      isPublic: formData.isPublic
+    })
+
+    if (!validationResult.success) {
+      const errors: Record<string, string> = {}
+      validationResult.error.issues.forEach((issue) => {
+        if (issue.path[0]) {
+          errors[issue.path[0] as string] = issue.message
+        }
+      })
+      setFormErrors(errors)
+      toast.error('Пожалуйста, исправьте ошибки в форме')
       return
     }
+
+    // Валидация JSON полей
+    try {
+      JSON.parse(formData.startPoint)
+      JSON.parse(formData.endPoint)
+      JSON.parse(formData.waypoints)
+      JSON.parse(formData.obstacles)
+    } catch (error) {
+      toast.error('Ошибка в JSON данных сценария')
+      return
+    }
+
+    // Очистка ошибок
+    setFormErrors({})
 
     setIsSaving(true)
     try {
@@ -305,6 +367,135 @@ export function ScenarioEditor() {
     fetchScenarios()
   }
 
+  const handleExport = (scenario: Scenario) => {
+    try {
+      const scenarioData = {
+        name: scenario.name,
+        description: scenario.description,
+        difficulty: scenario.difficulty,
+        distance: scenario.distance,
+        timeLimit: scenario.timeLimit,
+        weather: scenario.weather,
+        traffic: scenario.traffic,
+        robotType: scenario.robotType || 'standard',
+        robotCount: scenario.robotCount || 1,
+        cargoCapacity: scenario.cargoCapacity || 10.0,
+        cargoFragile: scenario.cargoFragile || false,
+        startPoint: JSON.parse(scenario.startPoint),
+        endPoint: JSON.parse(scenario.endPoint),
+        waypoints: JSON.parse(scenario.waypoints),
+        obstacles: JSON.parse(scenario.obstacles),
+        isPublic: scenario.isPublic,
+        version: '1.1.0',
+        exportedAt: new Date().toISOString()
+      }
+
+      const blob = new Blob([JSON.stringify(scenarioData, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${scenario.name.replace(/[^a-zA-Z0-9а-яА-ЯёЁ\s-]/g, '') || 'scenario'}_export.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      toast.success('Сценарий экспортирован')
+    } catch (error) {
+      console.error('Export error:', error)
+      toast.error('Ошибка экспорта сценария')
+    }
+  }
+
+  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string
+        const importedData = JSON.parse(content)
+
+        // Валидация структуры
+        if (!importedData.name || !importedData.difficulty) {
+          toast.error('Неверный формат файла сценария')
+          return
+        }
+
+        // Заполнение формы импортированными данными
+        setFormData({
+          name: importedData.name || '',
+          description: importedData.description || '',
+          difficulty: importedData.difficulty || 'medium',
+          distance: importedData.distance || 1000,
+          timeLimit: importedData.timeLimit || 300,
+          weather: importedData.weather || 'sunny',
+          traffic: importedData.traffic || 'low',
+          robotType: importedData.robotType || 'standard',
+          robotCount: importedData.robotCount || 1,
+          cargoCapacity: importedData.cargoCapacity || 10.0,
+          cargoFragile: importedData.cargoFragile || false,
+          startPoint: JSON.stringify(importedData.startPoint || { lat: 55.7558, lon: 37.6173, name: 'Стартовая точка' }),
+          endPoint: JSON.stringify(importedData.endPoint || { lat: 55.7522, lon: 37.6156, name: 'Точка доставки' }),
+          waypoints: JSON.stringify(importedData.waypoints || []),
+          obstacles: JSON.stringify(importedData.obstacles || []),
+          isPublic: importedData.isPublic !== undefined ? importedData.isPublic : true
+        })
+
+        setSelectedScenario(null)
+        setIsNewScenario(true)
+        setShowEditDialog(true)
+        toast.success('Сценарий импортирован')
+      } catch (error) {
+        console.error('Import error:', error)
+        toast.error('Ошибка импорта: неверный формат файла')
+      }
+    }
+    reader.readAsText(file)
+
+    // Сброс input для повторного импорта того же файла
+    event.target.value = ''
+  }
+
+  const handleLaunchInSimulator = (scenario: Scenario) => {
+    try {
+      // Конвертация Scenario в DeliveryScenario формат
+      const deliveryScenario = {
+        id: scenario.id,
+        name: scenario.name,
+        description: scenario.description || '',
+        difficulty: scenario.difficulty as 'easy' | 'medium' | 'hard',
+        distance: scenario.distance,
+        timeLimit: scenario.timeLimit,
+        weather: scenario.weather as 'sunny' | 'rainy' | 'snowy',
+        traffic: scenario.traffic as 'low' | 'medium' | 'high',
+        robotType: scenario.robotType || 'standard',
+        robotCount: scenario.robotCount || 1,
+        cargoCapacity: scenario.cargoCapacity || 10.0,
+        cargoFragile: scenario.cargoFragile || false,
+        startPoint: JSON.parse(scenario.startPoint),
+        endPoint: JSON.parse(scenario.endPoint),
+        waypoints: JSON.parse(scenario.waypoints),
+        obstacles: JSON.parse(scenario.obstacles),
+        isPublic: scenario.isPublic,
+        playsCount: scenario.playsCount,
+        avgScore: scenario.avgScore,
+        createdAt: scenario.createdAt,
+        creator: scenario.creator
+      }
+
+      // Отправка события для simulator-content
+      window.dispatchEvent(new CustomEvent('launchSimulatorScenario', {
+        detail: deliveryScenario
+      }))
+
+      toast.success('Сценарий загружен в симулятор! Переключитесь на вкладку "Симулятор"')
+    } catch (error) {
+      console.error('Launch in simulator error:', error)
+      toast.error('Ошибка запуска в симуляторе')
+    }
+  }
+
   const handleOpenRouteEditor = () => {
     try {
       const parsedWaypoints = JSON.parse(formData.waypoints || '[]')
@@ -362,6 +553,16 @@ export function ScenarioEditor() {
               Сценарии доставки
             </CardTitle>
             <div className="flex gap-1">
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleImport}
+                className="hidden"
+                id="scenario-import"
+              />
+              <Button variant="ghost" size="icon" onClick={() => document.getElementById('scenario-import')?.click()}>
+                <Upload className="w-4 h-4" />
+              </Button>
               <Button variant="ghost" size="icon" onClick={handleNewScenario}>
                 <Plus className="w-4 h-4" />
               </Button>
@@ -435,6 +636,24 @@ export function ScenarioEditor() {
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium truncate">{scenario.name}</span>
                       <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-green-600"
+                          onClick={() => handleLaunchInSimulator(scenario)}
+                          title="Запустить в симуляторе"
+                        >
+                          <Play className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => handleExport(scenario)}
+                          title="Экспортировать сценарий"
+                        >
+                          <Download className="w-3 h-3" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -529,9 +748,16 @@ export function ScenarioEditor() {
                 <Label>Название *</Label>
                 <Input
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, name: e.target.value })
+                    if (formErrors.name) setFormErrors({ ...formErrors, name: '' })
+                  }}
                   placeholder="Миссия: Доставка в центр"
+                  className={formErrors.name ? 'border-red-500' : ''}
                 />
+                {formErrors.name && (
+                  <p className="text-xs text-red-500">{formErrors.name}</p>
+                )}
               </div>
               
               <div className="space-y-2">
@@ -567,16 +793,30 @@ export function ScenarioEditor() {
                   <Input
                     type="number"
                     value={formData.distance}
-                    onChange={(e) => setFormData({ ...formData, distance: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, distance: parseInt(e.target.value) || 0 })
+                      if (formErrors.distance) setFormErrors({ ...formErrors, distance: '' })
+                    }}
+                    className={formErrors.distance ? 'border-red-500' : ''}
                   />
+                  {formErrors.distance && (
+                    <p className="text-xs text-red-500">{formErrors.distance}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Лимит времени (сек)</Label>
                   <Input
                     type="number"
                     value={formData.timeLimit}
-                    onChange={(e) => setFormData({ ...formData, timeLimit: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, timeLimit: parseInt(e.target.value) || 0 })
+                      if (formErrors.timeLimit) setFormErrors({ ...formErrors, timeLimit: '' })
+                    }}
+                    className={formErrors.timeLimit ? 'border-red-500' : ''}
                   />
+                  {formErrors.timeLimit && (
+                    <p className="text-xs text-red-500">{formErrors.timeLimit}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -621,6 +861,69 @@ export function ScenarioEditor() {
                     <SelectItem value="high">Высокий</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <Label className="flex items-center gap-2">
+                  <Bot className="w-4 h-4" />
+                  Настройки робота
+                </Label>
+
+                <div className="space-y-2">
+                  <Label>Тип робота</Label>
+                  <Select
+                    value={formData.robotType}
+                    onValueChange={(value) => setFormData({ ...formData, robotType: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="standard">🤖 Стандартный</SelectItem>
+                      <SelectItem value="heavy">🏋️ Тяжёлый (до 20 кг)</SelectItem>
+                      <SelectItem value="compact">📦 Компактный</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Количество</Label>
+                    <Input
+                      type="number"
+                      value={formData.robotCount}
+                      onChange={(e) => setFormData({ ...formData, robotCount: parseInt(e.target.value) || 1 })}
+                      min="1"
+                      max="10"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Грузоподъёмность (кг)</Label>
+                    <Input
+                      type="number"
+                      value={formData.cargoCapacity}
+                      onChange={(e) => setFormData({ ...formData, cargoCapacity: parseFloat(e.target.value) || 10 })}
+                      min="1"
+                      max="50"
+                      step="0.5"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Хрупкий груз</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Требуется аккуратная доставка
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.cargoFragile}
+                    onCheckedChange={(checked) => setFormData({ ...formData, cargoFragile: checked })}
+                  />
+                </div>
               </div>
 
               <Separator />

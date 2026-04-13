@@ -46,6 +46,10 @@ export const scenarioCreateSchema = z.object({
   timeLimit: z.number().positive().default(300),
   weather: z.enum(['sunny', 'rainy', 'snowy']).default('sunny'),
   traffic: z.enum(['low', 'medium', 'high']).default('low'),
+  robotType: z.enum(['standard', 'heavy', 'compact']).default('standard'),
+  robotCount: z.number().int().positive().max(10).default(1),
+  cargoCapacity: z.number().positive().default(10.0),
+  cargoFragile: z.boolean().default(false),
   startPoint: z.string(),
   endPoint: z.string(),
   waypoints: z.union([z.string(), z.array(z.any())]).transform(val =>
@@ -66,6 +70,10 @@ export const scenarioUpdateSchema = z.object({
   timeLimit: z.number().positive().optional(),
   weather: z.enum(['sunny', 'rainy', 'snowy']).optional(),
   traffic: z.enum(['low', 'medium', 'high']).optional(),
+  robotType: z.enum(['standard', 'heavy', 'compact']).optional(),
+  robotCount: z.number().int().positive().max(10).optional(),
+  cargoCapacity: z.number().positive().optional(),
+  cargoFragile: z.boolean().optional(),
   startPoint: z.string().optional(),
   endPoint: z.string().optional(),
   waypoints: z.union([z.string(), z.array(z.any())]).transform(val =>

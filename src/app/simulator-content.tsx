@@ -81,6 +81,28 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
   const [deliverySession, setDeliverySession] = useState<DeliverySession | null>(null)
   const [activeView, setActiveView] = useState<'simulator' | 'map' | 'lidar3d' | 'scenarios' | 'leaderboard' | 'algorithms'>('simulator')
 
+  const handleSelectScenario = (scenario: DeliveryScenario) => {
+    setSelectedScenario(scenario)
+    setDeliverySession({
+      scenarioId: scenario.id, startTime: Date.now(), status: 'preparing',
+      progress: 0, currentWaypoint: 0, distanceTraveled: 0, timeElapsed: 0, collisions: 0, batteryUsed: 0
+    })
+  }
+
+  // Обработчик запуска сценария из редактора сценариев
+  useEffect(() => {
+    const handleLaunchScenario = (e: Event) => {
+      const scenario = (e as CustomEvent<DeliveryScenario>).detail
+      if (scenario) {
+        handleSelectScenario(scenario)
+        setActiveView('simulator')
+      }
+    }
+
+    window.addEventListener('launchSimulatorScenario', handleLaunchScenario)
+    return () => window.removeEventListener('launchSimulatorScenario', handleLaunchScenario)
+  }, [])
+
   const handleManualControl = useCallback((command: 'forward' | 'backward' | 'left' | 'right' | 'rotate-left' | 'rotate-right' | 'stop') => {
     const commands: Record<string, { velocity?: { x: number; y: number; z: number }; rotation?: { y: number } }> = {
       'forward': { velocity: { x: 0, y: 0, z: 0.5 } },
@@ -93,14 +115,6 @@ export default function SimulatorContent({ user, onLogout, onShowProfile, onShow
     }
     sendCommand('move', commands[command])
   }, [sendCommand])
-
-  const handleSelectScenario = (scenario: DeliveryScenario) => {
-    setSelectedScenario(scenario)
-    setDeliverySession({
-      scenarioId: scenario.id, startTime: Date.now(), status: 'preparing',
-      progress: 0, currentWaypoint: 0, distanceTraveled: 0, timeElapsed: 0, collisions: 0, batteryUsed: 0
-    })
-  }
 
   const handleStartDelivery = () => {
     if (deliverySession) {
