@@ -12,7 +12,7 @@ import {
 // Mock NextResponse
 jest.mock('next/server', () => ({
   NextResponse: {
-    json: jest.fn((data, options) => ({ data, options }))
+    json: jest.fn((data, options) => ({ data, options, status: options?.status || 500 }))
   }
 }))
 
@@ -31,7 +31,7 @@ describe('API Error Handling Utilities', () => {
 
   describe('createErrorResponse', () => {
     it('should create error response with default values', () => {
-      const response = createErrorResponse({ message: 'Test error' })
+      const response = createErrorResponse({ message: 'Test error' }) as any
       
       expect(response.data).toEqual({
         error: 'Test error',
@@ -45,7 +45,7 @@ describe('API Error Handling Utilities', () => {
       const response = createErrorResponse({ 
         message: 'Not found', 
         status: 404 
-      })
+      }) as any
       
       expect(response.data).toEqual({
         error: 'Not found',
@@ -64,7 +64,7 @@ describe('API Error Handling Utilities', () => {
         message: 'Validation failed', 
         status: 400,
         details 
-      })
+      }) as any
       
       expect(response.data).toEqual({
         error: 'Validation failed',
@@ -78,7 +78,7 @@ describe('API Error Handling Utilities', () => {
       const response = createErrorResponse({ 
         message: 'Server error', 
         retryable: true 
-      })
+      }) as any
       
       expect(response.data.retryable).toBe(true)
     })
@@ -90,7 +90,7 @@ describe('API Error Handling Utilities', () => {
       ;(prismaError as any).name = 'PrismaClientKnownRequestError'
       ;(prismaError as any).code = 'P2002'
 
-      const response = handleApiError(prismaError, 'Test.GET')
+      const response = handleApiError(prismaError, 'Test.GET') as any
       
       expect(response.data).toEqual({
         error: 'Дублирующиеся данные',
@@ -105,7 +105,7 @@ describe('API Error Handling Utilities', () => {
       ;(prismaError as any).name = 'PrismaClientKnownRequestError'
       ;(prismaError as any).code = 'P2025'
 
-      const response = handleApiError(prismaError, 'Test.GET')
+      const response = handleApiError(prismaError, 'Test.GET') as any
       
       expect(response.data).toEqual({
         error: 'Запись не найдена',
@@ -119,7 +119,7 @@ describe('API Error Handling Utilities', () => {
       ;(prismaError as any).name = 'PrismaClientKnownRequestError'
       ;(prismaError as any).code = 'P2003'
 
-      const response = handleApiError(prismaError, 'Test.POST')
+      const response = handleApiError(prismaError, 'Test.POST') as any
       
       expect(response.data).toEqual({
         error: 'Ошибка связи данных',
@@ -133,7 +133,7 @@ describe('API Error Handling Utilities', () => {
       ;(prismaError as any).name = 'PrismaClientKnownRequestError'
       ;(prismaError as any).code = 'P9999'
 
-      const response = handleApiError(prismaError, 'Test.PUT')
+      const response = handleApiError(prismaError, 'Test.PUT') as any
       
       expect(response.data.error).toBe('Ошибка базы данных')
       expect(response.data.status).toBe(500)
@@ -147,7 +147,7 @@ describe('API Error Handling Utilities', () => {
         { path: ['email'], message: 'Invalid email' }
       ]
 
-      const response = handleApiError(zodError, 'Test.POST')
+      const response = handleApiError(zodError, 'Test.POST') as any
       
       expect(response.data).toEqual({
         error: 'Ошибка валидации',
@@ -163,7 +163,7 @@ describe('API Error Handling Utilities', () => {
     it('should handle not found errors', () => {
       const error = new Error('Resource not found')
 
-      const response = handleApiError(error, 'Test.GET')
+      const response = handleApiError(error, 'Test.GET') as any
       
       expect(response.data).toEqual({
         error: 'Не найдено',
@@ -175,7 +175,7 @@ describe('API Error Handling Utilities', () => {
     it('should handle unauthorized errors', () => {
       const error = new Error('Not authenticated')
 
-      const response = handleApiError(error, 'Test.GET')
+      const response = handleApiError(error, 'Test.GET') as any
       
       expect(response.data).toEqual({
         error: 'Не авторизован',
@@ -187,7 +187,7 @@ describe('API Error Handling Utilities', () => {
     it('should handle forbidden errors', () => {
       const error = new Error('Not enough permissions')
 
-      const response = handleApiError(error, 'Test.DELETE')
+      const response = handleApiError(error, 'Test.DELETE') as any
       
       expect(response.data).toEqual({
         error: 'Нет прав',
@@ -199,7 +199,7 @@ describe('API Error Handling Utilities', () => {
     it('should handle unknown errors as internal server error', () => {
       const error = new Error('Unexpected error')
 
-      const response = handleApiError(error, 'Test.GET')
+      const response = handleApiError(error, 'Test.GET') as any
       
       expect(response.data).toEqual({
         error: 'Внутренняя ошибка сервера',
@@ -209,7 +209,7 @@ describe('API Error Handling Utilities', () => {
     })
 
     it('should handle non-Error objects', () => {
-      const response = handleApiError('String error', 'Test.GET')
+      const response = handleApiError('String error', 'Test.GET') as any
       
       expect(response.data.error).toBe('Внутренняя ошибка сервера')
       expect(response.data.status).toBe(500)
@@ -220,7 +220,7 @@ describe('API Error Handling Utilities', () => {
   describe('successResponse', () => {
     it('should create success response with data', () => {
       const data = { items: [1, 2, 3] }
-      const response = successResponse(data)
+      const response = successResponse(data) as any
       
       expect(response.data).toEqual({ data })
       expect(response.options).toEqual({ status: 200 })
@@ -228,7 +228,7 @@ describe('API Error Handling Utilities', () => {
 
     it('should create success response with custom status', () => {
       const data = { created: true }
-      const response = successResponse(data, 201)
+      const response = successResponse(data, 201) as any
       
       expect(response.data).toEqual({ data })
       expect(response.options).toEqual({ status: 201 })
@@ -238,7 +238,7 @@ describe('API Error Handling Utilities', () => {
   describe('createSuccessResponse', () => {
     it('should create success response with success flag', () => {
       const data = { id: '123' }
-      const response = createSuccessResponse(data)
+      const response = createSuccessResponse(data) as any
       
       expect(response.data).toEqual({ success: true, data })
       expect(response.options).toEqual({ status: 200 })
@@ -247,7 +247,7 @@ describe('API Error Handling Utilities', () => {
 
   describe('helper functions', () => {
     it('handleNotFoundError should create 404 response', () => {
-      const response = handleNotFoundError('Resource not found', 'Test.GET')
+      const response = handleNotFoundError('Resource not found', 'Test.GET') as any
       
       expect(response.data).toEqual({
         error: 'Resource not found',
@@ -257,14 +257,14 @@ describe('API Error Handling Utilities', () => {
     })
 
     it('handleNotFoundError should use default message', () => {
-      const response = handleNotFoundError()
+      const response = handleNotFoundError() as any
       
       expect(response.data.error).toBe('Не найдено')
       expect(response.data.status).toBe(404)
     })
 
     it('handleUnauthorizedError should create 401 response', () => {
-      const response = handleUnauthorizedError('Login required', 'Auth.GET')
+      const response = handleUnauthorizedError('Login required', 'Auth.GET') as any
       
       expect(response.data).toEqual({
         error: 'Login required',
@@ -274,7 +274,7 @@ describe('API Error Handling Utilities', () => {
     })
 
     it('handleForbiddenError should create 403 response', () => {
-      const response = handleForbiddenError('Admin only', 'Admin.DELETE')
+      const response = handleForbiddenError('Admin only', 'Admin.DELETE') as any
       
       expect(response.data).toEqual({
         error: 'Admin only',
@@ -288,7 +288,7 @@ describe('API Error Handling Utilities', () => {
         { field: 'email', message: 'Invalid' }
       ]
       
-      const response = handleValidationError('Bad request', details, 'Test.POST')
+      const response = handleValidationError('Bad request', details, 'Test.POST') as any
       
       expect(response.data).toEqual({
         error: 'Bad request',
