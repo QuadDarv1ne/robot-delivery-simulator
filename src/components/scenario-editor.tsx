@@ -25,6 +25,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useUndoRedo } from '@/hooks/use-undo-redo'
+import { useLocalStorage } from '@/hooks/use-local-storage'
 import {
   MapPin,
   Plus,
@@ -50,7 +52,9 @@ import {
   Download,
   Upload,
   Play,
-  Bot
+  Bot,
+  Undo2,
+  Redo2
 } from 'lucide-react'
 import { RouteMapEditor } from '@/components/route-map-editor'
 import { ScenarioTestPanel } from '@/components/scenario-test-panel'
@@ -93,6 +97,7 @@ interface Scenario {
     id: string
     name: string
   }
+  _draftTimestamp?: string
 }
 
 const DEFAULT_SCENARIO = {
@@ -128,7 +133,6 @@ const scenarioFormSchema = z.object({
 export function ScenarioEditor() {
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null)
-  const [formData, setFormData] = useState(DEFAULT_SCENARIO)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -146,6 +150,80 @@ export function ScenarioEditor() {
   const [obstacles, setObstacles] = useState<Obstacle[]>([])
   const [showTestPanel, setShowTestPanel] = useState(false)
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Undo/Redo для формы
+  const {
+    state: formData,
+    setState: setFormData,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    clearHistory
+  } = useUndoRedo(DEFAULT_SCENARIO)
+
+  // Горячие клавиши для undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        undo()
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault()
+        redo()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [undo, redo])
+
+  // Автосохранение черновика
+  const [draftScenario, setDraftScenarioState] = useLocalStorage<any>('scenario-editor-draft', null)
+  const [draftTimestamp, setDraftTimestamp] = useState<string | null>(null)
+  const autoSaveRef = useRef<NodeJS.Timeout | null>(null)
+
+  const setDraftScenario = (data: any) => {
+    setDraftScenarioState(data)
+  }
+
+  // Автосохранение при изменении formData (debounced)
+  useEffect(() => {
+    if (autoSaveRef.current) {
+      clearTimeout(autoSaveRef.current)
+    }
+
+    autoSaveRef.current = setTimeout(() => {
+      if (showEditDialog && formData.name) {
+        setDraftScenarioState({
+          ...formData,
+          _draftTimestamp: new Date().toISOString()
+        })
+        setDraftTimestamp(new Date().toISOString())
+      }
+    }, 2000) // Автосохранение через 2 секунды после последнего изменения
+
+    return () => {
+      if (autoSaveRef.current) {
+        clearTimeout(autoSaveRef.current)
+      }
+    }
+  }, [formData, showEditDialog])
+
+  // Восстановление черновика при открытии редактора
+  const handleRestoreDraft = () => {
+    if (draftScenario && !draftScenario.id) {
+      setFormData(draftScenario)
+      toast.success('Черновик восстановлен')
+    }
+  }
+
+  // Очистка черновика после сохранения
+  const handleClearDraft = () => {
+    setDraftScenarioState(null)
+    setDraftTimestamp(null)
+  }
 
   useEffect(() => {
     fetchScenarios()
@@ -300,6 +378,7 @@ export function ScenarioEditor() {
       if (response.ok) {
         await fetchScenarios()
         setShowEditDialog(false)
+        handleClearDraft()
         toast.success(isNewScenario ? 'Сценарий создан' : 'Сценарий обновлён')
       } else {
         const data = await response.json()
@@ -730,15 +809,76 @@ export function ScenarioEditor() {
       </Card>
 
       {/* Editor Form */}
+      {draftScenario && draftTimestamp && !showEditDialog && (
+        <Card className="lg:col-span-2 border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
+          <CardContent className="pt-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Save className="w-5 h-5 text-yellow-600" />
+                <div>
+                  <p className="font-medium text-sm">Найден черновик</p>
+                  <p className="text-xs text-muted-foreground">
+                    Сохранён {new Date(draftTimestamp).toLocaleString('ru-RU')}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDraftScenarioState(null)}
+                >
+                  Удалить
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setFormData(draftScenario)
+                    setShowEditDialog(true)
+                    toast.success('Черновик восстановлен')
+                  }}
+                >
+                  Восстановить
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="lg:col-span-2">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Edit className="w-5 h-5" />
-            Редактор сценария
-          </CardTitle>
-          <CardDescription>
-            Создавайте и редактируйте миссии доставки для студентов
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Edit className="w-5 h-5" />
+                Редактор сценария
+              </CardTitle>
+              <CardDescription>
+                Создавайте и редактируйте миссии доставки для студентов
+              </CardDescription>
+            </div>
+            <div className="flex gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={undo}
+                disabled={!canUndo}
+                title="Отменить (Ctrl+Z)"
+              >
+                <Undo2 className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={redo}
+                disabled={!canRedo}
+                title="Повторить (Ctrl+Y)"
+              >
+                <Redo2 className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
