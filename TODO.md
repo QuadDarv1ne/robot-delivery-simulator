@@ -3,6 +3,11 @@
 ## Текущее состояние (13 апреля 2026)
 
 ### ✅ Завершено
+- Полная интеграция Unity WebGL с двусторонней связью через WebSocket
+- Компонент UnityWebGLPlayer с загрузкой, обработкой ошибок и состоянием
+- Хук useUnityBridge для удобной работы с Unity ↔ React
+- Примеры Unity скриптов (ReactBridge, RobotController, SensorManager, SimulationManager, NetworkManager)
+- Документация по интеграции Unity (docs/UNITY-INTEGRATION.md)
 - Импорт/экспорт сценариев в JSON формате
 - Клиентская валидация формы с Zod схемами
 - Undo/Redo для редактирования сценариев (хук useUndoRedo)
@@ -65,6 +70,8 @@
 - TypeScript компиляция проходит без ошибок (tsc --noEmit: 0 ошибок)
 
 ### 🔄 В работе
+- Полная интеграция Unity WebGL (тестирование с реальным билдом)
+- Оптимизация производительности Unity WebGL
 
 ### ⚠️ Проблемы качества
 - [x] Тесты hooks failing — `window is not defined` (исправлено: projects config в jest.config.ts)
