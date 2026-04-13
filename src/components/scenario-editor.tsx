@@ -54,7 +54,8 @@ import {
   Play,
   Bot,
   Undo2,
-  Redo2
+  Redo2,
+  Map
 } from 'lucide-react'
 import { RouteMapEditor } from '@/components/route-map-editor'
 import { ScenarioTestPanel } from '@/components/scenario-test-panel'
@@ -146,6 +147,7 @@ export function ScenarioEditor() {
   const [totalPages, setTotalPages] = useState(0)
   const [totalItems, setTotalItems] = useState(0)
   const [showRouteEditor, setShowRouteEditor] = useState(false)
+  const [showRoutePreview, setShowRoutePreview] = useState(false)
   const [waypoints, setWaypoints] = useState<Point[]>([])
   const [obstacles, setObstacles] = useState<Obstacle[]>([])
   const [showTestPanel, setShowTestPanel] = useState(false)
@@ -1088,10 +1090,21 @@ export function ScenarioEditor() {
                   <Route className="w-4 h-4" />
                   Маршрут
                 </Label>
-                <Button variant="outline" className="w-full" onClick={handleOpenRouteEditor}>
-                  <Navigation className="w-4 h-4 mr-2" />
-                  Редактировать точки маршрута ({waypoints.length})
-                </Button>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" className="w-full" onClick={handleOpenRouteEditor}>
+                    <Navigation className="w-4 h-4 mr-2" />
+                    Редактировать
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setShowRoutePreview(true)}
+                    disabled={waypoints.length === 0}
+                  >
+                    <Map className="w-4 h-4 mr-2" />
+                    Предпросмотр
+                  </Button>
+                </div>
               </div>
 
               <Separator />
@@ -1154,6 +1167,36 @@ export function ScenarioEditor() {
             initialObstacles={obstacles}
             onSave={handleSaveRouteEditor}
             onCancel={() => setShowRouteEditor(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Route Preview Dialog */}
+      <Dialog open={showRoutePreview} onOpenChange={setShowRoutePreview}>
+        <DialogContent className="max-w-7xl h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Map className="w-5 h-5" />
+              Предпросмотр маршрута
+            </DialogTitle>
+            <DialogDescription>
+              Так будет выглядеть маршрут в симуляции
+            </DialogDescription>
+          </DialogHeader>
+
+          <RouteMapEditor
+            initialPoints={waypoints}
+            initialObstacles={obstacles}
+            onSave={(points, obstacles) => {
+              setWaypoints(points)
+              setObstacles(obstacles)
+              setFormData({
+                ...formData,
+                waypoints: JSON.stringify(points),
+                obstacles: JSON.stringify(obstacles)
+              })
+            }}
+            onCancel={() => setShowRoutePreview(false)}
           />
         </DialogContent>
       </Dialog>
