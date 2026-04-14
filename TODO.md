@@ -1,6 +1,19 @@
 # TODO - Robot Delivery Simulator
 
-## Текущее состояние (13 апреля 2026)
+## Последнее обновление: 14 апреля 2026
+
+### 📊 Состояние проекта
+
+**Ветки:**
+- `main` — стабильная версия (текущая)
+- `dev` — ветка разработки
+- `feature/improvements` — фичи и улучшения
+
+**Статус:** Проект стабилен, есть 4 ошибки линтинга для исправления
+
+---
+
+## Текущее состояние (14 апреля 2026)
 
 ### ✅ Завершено
 - Шаблоны сценариев для быстрого создания миссий (8 шаблонов: городской, парк, кампус, склад, промышленный, зимний, дождь, ночной)
@@ -76,10 +89,44 @@
 - Оптимизация производительности Unity WebGL
 
 ### ⚠️ Проблемы качества
+- [x] **Linting errors (4)** — исправлены:
+  - `use-sdr-navigation.ts:100` — setState в useEffect (исправлено: useMemo вместо useEffect+setState)
+  - `use-undo-redo.ts:19` — ref update во время render (исправлено: удалён неиспользуемый ref)
+  - `use-unity-bridge.ts:8,49` — unsafe Function type (исправлено: `(data: unknown) => void`)
 - [x] Тесты hooks failing — `window is not defined` (исправлено: projects config в jest.config.ts)
 - [x] console.error в health check тесте — ошибка логируется при штатном тесте (исправлено: mock console.error)
 - [x] simulator-content.tsx — 814 строк, слишком большой файл (рефакторинг: вынесены компоненты)
 - [x] Мульти-роботная симуляция — серверная часть не поддерживала команды (исправлено: добавлены обработчики команд)
+- [ ] **TypeScript error** — `mini-services/sdr-server/index.ts` не находит модуль `socket.io` (отсутствует package.json)
+- [ ] **tsconfig.json** — `noImplicitAny: false` (рекомендуется включить для строгой типизации)
+
+### 📋 План работ
+
+#### 🔴 Критические исправления
+- [ ] Добавить `package.json` в `mini-services/sdr-server/` с зависимостями (socket.io)
+- [ ] Включить `noImplicitAny: true` в tsconfig.json и исправить все неявные `any`
+- [ ] Покрыть тестами критические компоненты:
+  - [ ] Simulator components (LidarView, IMUView, ControlPanel, UnityWebGLPlayer)
+  - [ ] SDR components (sdr-panel, geoanalytics, heatmap-layer)
+  - [ ] Hooks (useSimulator, useUnityBridge, useRos2Bridge, useMultiRobotSimulator, useSdrNavigation)
+  - [ ] API endpoints (auth, user profile, reports export)
+  - [ ] Утилиты (lib/format.ts, lib/rate-limit.ts)
+- [ ] Добавить тесты для mini-services (robot-simulator-server, sdr-server, ros2-bridge)
+
+#### 🟡 Улучшения кода
+- [ ] Добавить rate limiting к API endpoints (сейчас есть только lib/rate-limit.ts без использования)
+- [ ] Улучшить обработку ошибок в auth-context (сейчас базовая обработка)
+- [ ] Добавить Zod валидацию для WebSocket сообщений (типизация есть, но нет валидации)
+- [ ] Добавить retry logic для WebSocket соединений
+- [ ] Оптимизировать re-renders в simulator-content.tsx (React.memo, useMemo)
+- [ ] Добавить graceful degradation для Unity WebGL при отсутствии загрузки
+- [ ] Улучшить accessibility (a11y) для всех интерактивных компонентов
+
+#### 🟢 Фичи из roadmap
+- [ ] Редактор пользовательских сценариев (UI для создания/редактирования)
+- [ ] Полная интеграция Unity WebGL (тестирование с реальным билдом)
+- [ ] Мобильное приложение-компаньон
+- [ ] AI-уроки по обходу препятствий
 
 ### 📋 План работ
 
@@ -94,15 +141,6 @@
 - [x] Добавить обработку ошибок в API endpoints (algorithms, scenarios, user/profile, scenarios/[id])
 - [x] Настроить CI pipeline для автотестов (lint, build, test, e2e, security)
 - [x] Добавить ROS2 Bridge с поддержкой rosbridge_suite протокола
-
-#### Фичи из roadmap
-- [x] Система лидерборда (пагинация, skeleton loading, toast errors)
-- [ ] Редактор пользовательских сценариев
-- [x] Мульти-роботная симуляция (серверная часть)
-- [x] Поддержка ROS2 bridge (rosbridge_suite совместимость)
-- [ ] Полная интеграция Unity WebGL
-- [ ] Мобильное приложение-компаньон
-- [ ] AI-уроки по обходу препятствий
 
 ---
 
