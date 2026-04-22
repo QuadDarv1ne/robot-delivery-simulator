@@ -30,6 +30,9 @@ export function useSimulator() {
   })
 
   const socketRef = useRef<ReturnType<typeof io> | null>(null)
+  const retryCountRef = useRef(0)
+  const maxRetries = 5
+  const retryDelay = 3000
 
   const handleSensorData = useCallback((data: SensorDataEvent) => {
     setState(prev => ({ ...prev, sensorData: data.sensorData, robotState: data.robotState }))
@@ -39,13 +42,18 @@ export function useSimulator() {
     setState(prev => ({ ...prev, robotState }))
   }, [])
 
-  useEffect(() => {
+  const connect = useCallback(() => {
+    if (retryCountRef.current >= maxRetries) {
+      toast.error('Не удалось подключиться после нескольких попыток')
+      return
+    }
+
     const socket = io(SIMULATOR_SERVER_URL, {
       path: '/',
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
+      reconnectionAttempts: maxRetries,
+      reconnectionDelay: retryDelay,
       timeout: 10000
     })
     socketRef.current = socket
@@ -53,6 +61,8 @@ export function useSimulator() {
     const handleConnect = () => {
       socket.emit('register', { type: 'viewer' })
       setState(prev => ({ ...prev, isConnected: true }))
+      retryCountRef.current = 0
+      toast.success('Подключено к серверу симуляции')
     }
 
     const handleDisconnect = (reason: string) => {
@@ -62,9 +72,12 @@ export function useSimulator() {
       }
     }
 
-    const handleConnectError = () => {
+    const handleConnectError = (error: { message: string }) => {
+      retryCountRef.current++
       setState(prev => ({ ...prev, isConnected: false }))
-      toast.error('Не удалось подключиться к серверу симуляции')
+      if (retryCountRef.current < maxRetries) {
+        toast.warning(`Попытка переподключения ${retryCountRef.current}/${maxRetries}...`)
+      }
     }
 
     const handleError = (error: { message: string; code?: string }) => {
@@ -89,6 +102,10 @@ export function useSimulator() {
       socketRef.current = null
     }
   }, [handleSensorData, handleRobotState])
+
+  useEffect(() => {
+    return connect()
+  }, [connect])
 
   const sendCommand = useCallback((type: ControlCommandType, data?: Record<string, unknown>) => {
     if (socketRef.current?.connected) {

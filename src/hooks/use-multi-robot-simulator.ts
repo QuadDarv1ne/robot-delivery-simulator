@@ -17,6 +17,9 @@ export function useMultiRobotSimulator() {
   const [session, setSession] = useState<MultiRobotSession | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const socketRef = useRef<ReturnType<typeof io> | null>(null)
+  const retryCountRef = useRef(0)
+  const maxRetries = 5
+  const retryDelay = 3000
 
   const handleRobotsUpdate = useCallback((updatedRobots: RobotState[]) => {
     setRobots(updatedRobots)
@@ -26,13 +29,18 @@ export function useMultiRobotSimulator() {
     setSession(updatedSession)
   }, [])
 
-  useEffect(() => {
+  const connect = useCallback(() => {
+    if (retryCountRef.current >= maxRetries) {
+      toast.error('Не удалось подключиться после нескольких попыток')
+      return
+    }
+
     const socket = io(SIMULATOR_SERVER_URL, {
       path: '/',
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
+      reconnectionAttempts: maxRetries,
+      reconnectionDelay: retryDelay,
       timeout: 10000
     })
     socketRef.current = socket
@@ -40,6 +48,8 @@ export function useMultiRobotSimulator() {
     const handleConnect = () => {
       socket.emit('register', { type: 'multi-robot-viewer' })
       setIsConnected(true)
+      retryCountRef.current = 0
+      toast.success('Подключено к серверу мульти-роботной симуляции')
     }
 
     const handleDisconnect = (reason: string) => {
@@ -50,8 +60,11 @@ export function useMultiRobotSimulator() {
     }
 
     const handleConnectError = () => {
+      retryCountRef.current++
       setIsConnected(false)
-      toast.error('Не удалось подключиться к серверу')
+      if (retryCountRef.current < maxRetries) {
+        toast.warning(`Попытка переподключения ${retryCountRef.current}/${maxRetries}...`)
+      }
     }
 
     const handleError = (error: { message: string; code?: string }) => {
@@ -74,7 +87,11 @@ export function useMultiRobotSimulator() {
       socket.off('multi-session-update', handleSessionUpdate)
       socket.disconnect()
     }
-  }, [])
+  }, [handleRobotsUpdate, handleSessionUpdate])
+
+  useEffect(() => {
+    return connect()
+  }, [connect])
 
   const startSession = useCallback(async (scenarioId: string, robotConfigs: Array<{
     id: string

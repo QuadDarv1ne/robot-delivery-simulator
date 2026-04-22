@@ -122,7 +122,7 @@
 - [x] Унифицировать формат ошибок во всех API endpoints
 - [x] Добавить proper error handling в updateUser
 - [x] Исправить bestTime calculation logic
-- [ ] Добавить retry logic для WebSocket соединений
+- [x] Добавить retry logic для WebSocket соединений
 - [ ] Оптимизировать re-renders (React.memo, useMemo)
 - [ ] Добавить graceful degradation для Unity WebGL
 - [ ] Улучшить accessibility (a11y) для интерактивных компонентов
