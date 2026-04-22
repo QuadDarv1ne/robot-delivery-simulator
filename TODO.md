@@ -38,21 +38,8 @@
 - Drag & Drop точек маршрута на Leaflet карте
 - Поиск сценариев с фильтрами (сложность, погода)
 - Клонирование сценариев
-- API endpoints:
-  - `GET /api/algorithms/search` — поиск алгоритмов
-  - `GET /api/algorithms/[id]` — получение алгоритма по ID
-  - `POST /api/algorithms/clone` — клонирование алгоритма
-  - `GET /api/scenarios/search` — поиск сценариев
-  - `POST /api/scenarios/clone` — клонирование сценария
-  - `GET /api/scenarios/[id]` — получение сценария по ID
-  - `GET /api/algorithms/favorite` — список избранного
-  - `POST /api/algorithms/favorite` — добавить в избранное
-  - `DELETE /api/algorithms/favorite` — удалить из избранного
-  - `GET /api/algorithms/history` — история запусков
-  - `GET /api/algorithms/run` — запуск симуляции с деталями (батарея, скорость)
+- API endpoints (поиск, клонирование, избранное, история, запуск)
 - Документация (docs/API.md, docs/API-EXAMPLES.md, docs/DEVELOPMENT-TIPS.md)
-- Изображение релиза (img/2026-03-13-v1.png)
-- Сборка проходит успешно
 - Zod валидация для всех API endpoints
 - Toast уведомления для UX
 - Пагинация на клиенте (алгоритмы, сценарии)
@@ -60,87 +47,103 @@
 - Debouncing для поиска
 - WebSocket error handling
 - Тесты для API endpoints (Jest)
-- Подсветка синтаксиса в редакторах алгоритмов (react-syntax-highlighter)
-- Редактор маршрута для сценариев (точки маршрута)
-- Панель ручного управления роботом (вперёд/назад/повороты)
+- Подсветка синтаксиса в редакторах алгоритмов
+- Редактор маршрута для сценариев
+- Панель ручного управления роботом
 - Централизованное логирование (logger.ts, api-error.ts)
 - Утилиты форматирования (format.ts)
 - React hooks (useDebounce, useLocalStorage, useMediaQuery, useOnlineStatus)
 - Улучшена обработка ошибок в auth-context
-- Тесты для кастомных хуков (useDebounce, useLocalStorage, useOnlineStatus)
+- Тесты для кастомных хуков
 - Тесты для API endpoints клонирования
-- WebSocket команды для симулятора:
-  - getBattery, getLocation, resetPosition
-  - getSensors, setSensors
-  - addObstacle, removeObstacle, clearObstacles
-  - Collision detection с препятствиями
-- Monaco Editor с автодополнением кода (Python/JavaScript)
+- WebSocket команды для симулятора
+- Monaco Editor с автодополнением кода
 - Оптимизация сборки (turbopack, chunk splitting)
-- Рефакторинг simulator-content.tsx (вынесены компоненты: LidarView, IMUView, ControlPanel, UnityWebGLPlayer)
+- Рефакторинг simulator-content.tsx (вынесены компоненты)
 - Создан хук useSimulator для управления состоянием WebSocket
-- Покрытие тестами: 49 тестов проходят (API, Components, Hooks, Utils)
-- Jest конфигурация разделена на 4 проекта для правильной среды тестирования
+- Покрытие тестами: 49 тестов проходят
+- Jest конфигурация разделена на 4 проекта
 - E2E тесты для критических путей (Playwright)
-- CI/CD pipeline (GitHub Actions: lint, build, test, e2e, security)
-- TypeScript компиляция проходит без ошибок (tsc --noEmit: 0 ошибок)
+- CI/CD pipeline (GitHub Actions)
+- TypeScript компиляция проходит без ошибок
 
 ### 🔄 В работе
 - Полная интеграция Unity WebGL (тестирование с реальным билдом)
 - Оптимизация производительности Unity WebGL
 
 ### ⚠️ Проблемы качества
-- [x] **Linting errors (4)** — исправлены:
-  - `use-sdr-navigation.ts:100` — setState в useEffect (исправлено: useMemo вместо useEffect+setState)
-  - `use-undo-redo.ts:19` — ref update во время render (исправлено: удалён неиспользуемый ref)
-  - `use-unity-bridge.ts:8,49` — unsafe Function type (исправлено: `(data: unknown) => void`)
-- [x] Тесты hooks failing — `window is not defined` (исправлено: projects config в jest.config.ts)
-- [x] console.error в health check тесте — ошибка логируется при штатном тесте (исправлено: mock console.error)
-- [x] simulator-content.tsx — 814 строк, слишком большой файл (рефакторинг: вынесены компоненты)
-- [x] Мульти-роботная симуляция — серверная часть не поддерживала команды (исправлено: добавлены обработчики команд)
-- [ ] **TypeScript error** — `mini-services/sdr-server/index.ts` не находит модуль `socket.io` (отсутствует package.json)
-- [ ] **tsconfig.json** — `noImplicitAny: false` (рекомендуется включить для строгой типизации)
+
+#### 🔴 КРИТИЧЕСКИЕ (требуют исправления)
+- [ ] **CRITICAL: Report export — hardcoded Linux paths + execSync**
+  - `src/app/api/reports/export/route.ts`: пути `/home/z/my-project/download`, `/usr/share/fonts/...`
+  - `execSync` с пользовательскими данными — риск command injection
+  - Не работает на Windows и большинстве серверов
+- [ ] **CRITICAL: Auth secret fallback к захардкоженному значению**
+  - `src/lib/auth.ts`: `secret: process.env.NEXTAUTH_SECRET || "robot-simulator-secret-key-2024"`
+  - Если переменная не задана — сессии можно подделать
+- [ ] **CRITICAL: Algorithm simulation — фейковая симуляция с Math.random()**
+  - `src/app/api/algorithms/run/route.ts`: не выполняет код, использует regex + random
+  - Результаты недетерминированы для одного и той же входных данных
+- [ ] **CRITICAL: In-memory rate limiting — не работает в production**
+  - `src/lib/rate-limit.ts`: данные в Map, теряются при рестарте
+  - Не работает при нескольких инстансах (Vercel, Railway)
+
+#### 🟡 ВЫСОКИЙ ПРИОРИТЕТ
+- [ ] **WebSocket URL захардкожен к localhost**
+  - `use-simulator.ts:36`, `use-multi-robot-simulator.ts:27`
+  - Нет поддержки environment variable
+- [ ] **Несогласованный формат ошибок в API**
+  - Некоторые endpoint'ы используют `createErrorResponse`, другие — ручной `NextResponse.json({ error })`
+- [ ] **updateUser silently fails**
+  - `auth-context.tsx:99`: ошибка проглатывается без уведомления
+- [ ] **Email verification не функционален**
+  - Модель есть, routes есть, но SMTP не настроен (закомментирован в .env.example)
+- [ ] **Password reset tokens возвращаются в response (demo mode)**
+  - `forgot-password/route.ts:57`: токен виден в ответе API
+
+#### 🟢 СРЕДНИЙ ПРИОРИТЕТ
+- [ ] **SQLite для многопользовательской системы**
+  - Ограниченная поддержка конкурентных записей
+- [ ] **noImplicitAny: false в tsconfig.json**
+  - Разрешены неявные `any` типы
+- [ ] **Нет пагинации на GET /api/algorithms**
+  - Возвращает ВСЕ алгоритмы без лимита
+- [ ] **Flawed bestTime calculation**
+  - `algorithms/run/route.ts`: `bestTime: result.success ? { decrement: result.timeElapsed }` — логика неверна
+- [ ] **Leaderboard x-user-id header не устанавливается**
+  - Фронтенд не отправляет этот header
+- [ ] **CORS origin: '*' на WebSocket серверах**
+  - Разрешает любые origin
+- [ ] **Memory leak risk в rate limiter**
+  - Map может расти при постоянном трафике
 
 ### 📋 План работ
 
-#### 🔴 Критические исправления
-- [ ] Добавить `package.json` в `mini-services/sdr-server/` с зависимостями (socket.io)
-- [ ] Включить `noImplicitAny: true` в tsconfig.json и исправить все неявные `any`
-- [ ] Покрыть тестами критические компоненты:
-  - [ ] Simulator components (LidarView, IMUView, ControlPanel, UnityWebGLPlayer)
-  - [ ] SDR components (sdr-panel, geoanalytics, heatmap-layer)
-  - [ ] Hooks (useSimulator, useUnityBridge, useRos2Bridge, useMultiRobotSimulator, useSdrNavigation)
-  - [ ] API endpoints (auth, user profile, reports export)
-  - [ ] Утилиты (lib/format.ts, lib/rate-limit.ts)
-- [ ] Добавить тесты для mini-services (robot-simulator-server, sdr-server, ros2-bridge)
+#### 🔴 Критические исправления (в процессе)
+- [ ] Исправить report export — убрать hardcoded пути, execSync, добавить кроссплатформенность
+- [ ] Убрать fallback auth secret — требовать NEXTAUTH_SECRET в production
+- [ ] Реализовать настоящую симуляцию алгоритмов или честно помечать как "демо"
+- [ ] Rate limiting — добавить опцию Redis или至少 persistent storage
 
 #### 🟡 Улучшения кода
-- [ ] Добавить rate limiting к API endpoints (сейчас есть только lib/rate-limit.ts без использования)
-- [ ] Улучшить обработку ошибок в auth-context (сейчас базовая обработка)
-- [ ] Добавить Zod валидацию для WebSocket сообщений (типизация есть, но нет валидации)
+- [ ] Добавить env variable поддержку для WebSocket URL
+- [ ] Унифицировать формат ошибок во всех API endpoints
+- [ ] Добавить proper error handling в updateUser
 - [ ] Добавить retry logic для WebSocket соединений
-- [ ] Оптимизировать re-renders в simulator-content.tsx (React.memo, useMemo)
-- [ ] Добавить graceful degradation для Unity WebGL при отсутствии загрузки
-- [ ] Улучшить accessibility (a11y) для всех интерактивных компонентов
+- [ ] Оптимизировать re-renders (React.memo, useMemo)
+- [ ] Добавить graceful degradation для Unity WebGL
+- [ ] Улучшить accessibility (a11y) для интерактивных компонентов
+- [ ] Добавить Zod валидацию для WebSocket сообщений
+- [ ] Исправить bestTime calculation logic
+- [ ] Добавить пагинацию на GET /api/algorithms
 
 #### 🟢 Фичи из roadmap
-- [ ] Редактор пользовательских сценариев (UI для создания/редактирования)
 - [ ] Полная интеграция Unity WebGL (тестирование с реальным билдом)
+- [ ] Мульти-роботная симуляция
+- [ ] Редактор пользовательских сценариев
+- [ ] Система лидерборда
 - [ ] Мобильное приложение-компаньон
 - [ ] AI-уроки по обходу препятствий
-
-### 📋 План работ
-
-#### Улучшения
-- [x] Продолжить оптимизацию размера сборки (удалены 8 неиспользуемых зависимостей)
-- [x] Рефакторинг simulator-content.tsx на меньшие компоненты
-- [x] Покрыть тестами компоненты (Button, Card, Badge, Progress, Input, Separator)
-- [x] Покрыть тестами Leaderboard и AnalyticsPanel (49 тестов всего)
-- [x] Улучшить типизацию WebSocket событий (shared types, type-safe socket)
-- [x] Добавить rate limiting к чувствительным endpoints (forgot-password, reset-password, admin/users)
-- [x] Добавить e2e тесты для критических путей
-- [x] Добавить обработку ошибок в API endpoints (algorithms, scenarios, user/profile, scenarios/[id])
-- [x] Настроить CI pipeline для автотестов (lint, build, test, e2e, security)
-- [x] Добавить ROS2 Bridge с поддержкой rosbridge_suite протокола
 
 ---
 

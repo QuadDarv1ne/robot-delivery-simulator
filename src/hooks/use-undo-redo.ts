@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback } from 'react'
 
 interface UseUndoRedoReturn<T> {
   state: T
@@ -14,9 +14,6 @@ export function useUndoRedo<T>(initialState: T, maxHistory: number = 20): UseUnd
   const [state, setState] = useState<T>(initialState)
   const [past, setPast] = useState<T[]>([])
   const [future, setFuture] = useState<T[]>([])
-  
-  const currentStateRef = useRef(state)
-  currentStateRef.current = state
 
   const handleSetState = useCallback((newState: T | ((prev: T) => T)) => {
     setState(prevState => {

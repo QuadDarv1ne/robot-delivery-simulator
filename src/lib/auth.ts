@@ -142,5 +142,18 @@ export const authOptions: NextAuthOptions = {
       }
     }
   },
-  secret: process.env.NEXTAUTH_SECRET || "robot-simulator-secret-key-2024"
+  secret: process.env.NEXTAUTH_SECRET ?? (() => {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'NEXTAUTH_SECRET environment variable is required in production. ' +
+        'Generate one with: openssl rand -base64 32'
+      )
+    }
+    // Development fallback only
+    console.warn(
+      '⚠️  NEXTAUTH_SECRET not set. Using temporary key (development only). ' +
+      'Set NEXTAUTH_SECRET in .env for production.'
+    )
+    return 'dev-only-secret-key-do-not-use-in-production'
+  })()
 }

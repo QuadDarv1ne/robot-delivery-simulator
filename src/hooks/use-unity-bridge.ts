@@ -5,7 +5,7 @@ import { useCallback, useRef } from 'react'
  * Предоставляет методы для отправки и получения данных из Unity
  */
 export function useUnityBridge() {
-  const callbacksRef = useRef<Map<string, Function>>(new Map())
+  const callbacksRef = useRef<Map<string, (data: unknown) => void>>(new Map())
 
   /**
    * Отправка данных из React в Unity
@@ -46,7 +46,7 @@ export function useUnityBridge() {
    * @param callback Callback function
    * @returns Unsubscribe function
    */
-  const listenToUnity = useCallback((event: string, callback: Function) => {
+  const listenToUnity = useCallback((event: string, callback: (data: unknown) => void) => {
     callbacksRef.current.set(event, callback)
     
     const handler = (e: CustomEvent) => {

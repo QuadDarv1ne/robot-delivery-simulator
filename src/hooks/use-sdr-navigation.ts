@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { io, Socket } from 'socket.io-client'
 import type { SDRData, SDRContact } from '@/components/sdr/types'
 
@@ -33,7 +33,6 @@ interface SDRNavigationAlert {
 
 export function useSDRForNavigation({ robotPosition, enabled = true }: UseSDRForNavigationProps) {
   const [sdrData, setSDRData] = useState<SDRData | null>(null)
-  const [alerts, setAlerts] = useState<SDRNavigationAlert[]>([])
   const socketRef = useRef<Socket | null>(null)
 
   // Расчет пеленга от робота к цели
@@ -95,10 +94,9 @@ export function useSDRForNavigation({ robotPosition, enabled = true }: UseSDRFor
   }, [enabled])
 
   // Анализ SDR-данных для навигации
-  useEffect(() => {
-    if (!sdrData || !robotPosition || !enabled) {
-      setAlerts([])
-      return
+  const computeAlerts = useCallback(() => {
+    if (!sdrData || !robotPosition) {
+      return []
     }
 
     const newAlerts: SDRNavigationAlert[] = []
@@ -134,8 +132,15 @@ export function useSDRForNavigation({ robotPosition, enabled = true }: UseSDRFor
     // Сортируем по расстоянию (ближайшие первыми)
     newAlerts.sort((a, b) => a.distance - b.distance)
 
-    setAlerts(newAlerts)
-  }, [sdrData, robotPosition, enabled, calculateBearing, assessRisk])
+    return newAlerts
+  }, [sdrData, robotPosition, calculateBearing, assessRisk])
+
+  const alerts = useMemo(() => {
+    if (!enabled) {
+      return []
+    }
+    return computeAlerts()
+  }, [enabled, computeAlerts])
 
   // Получение ближайшего объекта определенного типа
   const getNearestContact = useCallback((type?: 'ads-b' | 'ais' | 'aprs'): SDRContact | null => {
