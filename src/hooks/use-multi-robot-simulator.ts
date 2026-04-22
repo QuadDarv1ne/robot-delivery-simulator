@@ -5,6 +5,13 @@ import { io } from 'socket.io-client'
 import { toast } from 'sonner'
 import type { RobotState, MultiRobotSession } from '@/types/multi-robot'
 
+// WebSocket server URL from environment variable or default to localhost
+const SIMULATOR_SERVER_URL =
+  process.env.NEXT_PUBLIC_SIMULATOR_URL ||
+  (typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:3003'
+    : `https://${window.location.hostname}:3003`)
+
 export function useMultiRobotSimulator() {
   const [robots, setRobots] = useState<RobotState[]>([])
   const [session, setSession] = useState<MultiRobotSession | null>(null)
@@ -20,7 +27,7 @@ export function useMultiRobotSimulator() {
   }, [])
 
   useEffect(() => {
-    const socket = io('http://localhost:3003', {
+    const socket = io(SIMULATOR_SERVER_URL, {
       path: '/',
       transports: ['websocket', 'polling'],
       reconnection: true,

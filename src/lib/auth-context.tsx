@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 export interface User {
   id: string
@@ -123,13 +124,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
 
       if (!response.ok) {
-        return
+        const errorData = await response.json().catch(() => ({}))
+        const errorMessage = errorData.error || 'Ошибка обновления профиля'
+        toast.error(errorMessage)
+        throw new Error(errorMessage)
       }
 
       const updated = await response.json()
       setUser(prev => prev ? { ...prev, ...updated.user } : null)
+      toast.success('Профиль обновлён')
     } catch (error) {
-      console.error('Update user error:', error)
+      // Error is already handled with toast above
+      if (!(error instanceof Error && error.message.includes('Ошибка'))) {
+        console.error('Update user error:', error)
+      }
+      throw error
     }
   }, [])
 

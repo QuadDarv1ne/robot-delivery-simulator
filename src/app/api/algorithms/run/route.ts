@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
+      return createErrorResponse({ message: 'Не авторизован', status: 401 })
     }
 
     const user = await db.user.findUnique({
@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!user) {
-      return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 })
+      return createErrorResponse({ message: 'Пользователь не найден', status: 404 })
     }
 
     const body = await request.json()
@@ -190,10 +190,11 @@ export async function POST(request: NextRequest) {
         field: e.path.join('.'),
         message: e.message
       }))
-      return NextResponse.json(
-        { error: 'Ошибка валидации', details: errors },
-        { status: 400 }
-      )
+      return createErrorResponse({
+        message: 'Ошибка валидации',
+        status: 400,
+        details: errors
+      })
     }
 
     const { algorithmId, code } = validation.data
@@ -206,13 +207,13 @@ export async function POST(request: NextRequest) {
         where: { id: algorithmId }
       })
       if (!algorithm) {
-        return NextResponse.json({ error: 'Алгоритм не найден' }, { status: 404 })
+        return createErrorResponse({ message: 'Алгоритм не найден', status: 404 })
       }
       algorithmCode = algorithm.code
     }
 
     if (!algorithmCode) {
-      return NextResponse.json({ error: 'Код алгоритма обязателен' }, { status: 400 })
+      return createErrorResponse({ message: 'Код алгоритма обязателен', status: 400 })
     }
 
     // Run simulation
@@ -253,7 +254,11 @@ export async function POST(request: NextRequest) {
         totalDeliveries: { increment: 1 },
         totalDistance: { increment: result.distanceTraveled },
         totalCollisions: { increment: result.collisions },
-        bestTime: result.success ? { decrement: result.timeElapsed } : undefined
+        bestTime: result.success
+          ? (user.bestTime === null || result.timeElapsed < user.bestTime
+              ? result.timeElapsed
+              : user.bestTime)
+          : user.bestTime
       }
     })
 

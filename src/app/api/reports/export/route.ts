@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
-      return createErrorResponse('Не авторизован', 401)
+      return createErrorResponse({ message: 'Не авторизован', status: 401 })
     }
 
     const user = await db.user.findUnique({
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!user) {
-      return createErrorResponse('Пользователь не найден', 404)
+      return createErrorResponse({ message: 'Пользователь не найден', status: 404 })
     }
 
     const searchParams = request.nextUrl.searchParams
@@ -91,6 +91,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('ReportExport.POST:', error)
-    return createErrorResponse('Ошибка генерации отчёта', 500)
+    return createErrorResponse({ message: 'Ошибка генерации отчёта', status: 500 })
   }
 }

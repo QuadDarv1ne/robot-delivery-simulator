@@ -74,11 +74,11 @@
 ### ⚠️ Проблемы качества
 
 #### 🔴 КРИТИЧЕСКИЕ (требуют исправления)
-- [ ] **CRITICAL: Report export — hardcoded Linux paths + execSync**
+- [x] **CRITICAL: Report export — hardcoded Linux paths + execSync**
   - `src/app/api/reports/export/route.ts`: пути `/home/z/my-project/download`, `/usr/share/fonts/...`
   - `execSync` с пользовательскими данными — риск command injection
   - Не работает на Windows и большинстве серверов
-- [ ] **CRITICAL: Auth secret fallback к захардкоженному значению**
+- [x] **CRITICAL: Auth secret fallback к захардкоженному значению**
   - `src/lib/auth.ts`: `secret: process.env.NEXTAUTH_SECRET || "robot-simulator-secret-key-2024"`
   - Если переменная не задана — сессии можно подделать
 - [ ] **CRITICAL: Algorithm simulation — фейковая симуляция с Math.random()**
@@ -89,26 +89,18 @@
   - Не работает при нескольких инстансах (Vercel, Railway)
 
 #### 🟡 ВЫСОКИЙ ПРИОРИТЕТ
-- [ ] **WebSocket URL захардкожен к localhost**
+- [x] **WebSocket URL захардкожен к localhost**
   - `use-simulator.ts:36`, `use-multi-robot-simulator.ts:27`
   - Нет поддержки environment variable
-- [ ] **Несогласованный формат ошибок в API**
+- [x] **Несогласованный формат ошибок в API**
   - Некоторые endpoint'ы используют `createErrorResponse`, другие — ручной `NextResponse.json({ error })`
-- [ ] **updateUser silently fails**
+- [x] **updateUser silently fails**
   - `auth-context.tsx:99`: ошибка проглатывается без уведомления
 - [ ] **Email verification не функционален**
   - Модель есть, routes есть, но SMTP не настроен (закомментирован в .env.example)
 - [ ] **Password reset tokens возвращаются в response (demo mode)**
   - `forgot-password/route.ts:57`: токен виден в ответе API
-
-#### 🟢 СРЕДНИЙ ПРИОРИТЕТ
-- [ ] **SQLite для многопользовательской системы**
-  - Ограниченная поддержка конкурентных записей
-- [ ] **noImplicitAny: false в tsconfig.json**
-  - Разрешены неявные `any` типы
-- [ ] **Нет пагинации на GET /api/algorithms**
-  - Возвращает ВСЕ алгоритмы без лимита
-- [ ] **Flawed bestTime calculation**
+- [x] **Flawed bestTime calculation**
   - `algorithms/run/route.ts`: `bestTime: result.success ? { decrement: result.timeElapsed }` — логика неверна
 - [ ] **Leaderboard x-user-id header не устанавливается**
   - Фронтенд не отправляет этот header
@@ -120,21 +112,21 @@
 ### 📋 План работ
 
 #### 🔴 Критические исправления (в процессе)
-- [ ] Исправить report export — убрать hardcoded пути, execSync, добавить кроссплатформенность
-- [ ] Убрать fallback auth secret — требовать NEXTAUTH_SECRET в production
+- [x] Исправить report export — убрать hardcoded пути, execSync, добавить кроссплатформенность
+- [x] Убрать fallback auth secret — требовать NEXTAUTH_SECRET в production
 - [ ] Реализовать настоящую симуляцию алгоритмов или честно помечать как "демо"
 - [ ] Rate limiting — добавить опцию Redis или至少 persistent storage
 
 #### 🟡 Улучшения кода
-- [ ] Добавить env variable поддержку для WebSocket URL
-- [ ] Унифицировать формат ошибок во всех API endpoints
-- [ ] Добавить proper error handling в updateUser
+- [x] Добавить env variable поддержку для WebSocket URL
+- [x] Унифицировать формат ошибок во всех API endpoints
+- [x] Добавить proper error handling в updateUser
+- [x] Исправить bestTime calculation logic
 - [ ] Добавить retry logic для WebSocket соединений
 - [ ] Оптимизировать re-renders (React.memo, useMemo)
 - [ ] Добавить graceful degradation для Unity WebGL
 - [ ] Улучшить accessibility (a11y) для интерактивных компонентов
 - [ ] Добавить Zod валидацию для WebSocket сообщений
-- [ ] Исправить bestTime calculation logic
 - [ ] Добавить пагинацию на GET /api/algorithms
 
 #### 🟢 Фичи из roadmap

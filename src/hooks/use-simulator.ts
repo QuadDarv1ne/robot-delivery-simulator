@@ -14,6 +14,13 @@ import type {
 
 export type { RobotState, SensorData, SimulatorState } from '@/types/websocket'
 
+// WebSocket server URL from environment variable or default to localhost
+const SIMULATOR_SERVER_URL =
+  process.env.NEXT_PUBLIC_SIMULATOR_URL ||
+  (typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:3003'
+    : `https://${window.location.hostname}:3003`)
+
 export function useSimulator() {
   const isOnline = useOnlineStatus()
   const [state, setState] = useState<SimulatorState>({
@@ -33,7 +40,7 @@ export function useSimulator() {
   }, [])
 
   useEffect(() => {
-    const socket = io('http://localhost:3003', {
+    const socket = io(SIMULATOR_SERVER_URL, {
       path: '/',
       transports: ['websocket', 'polling'],
       reconnection: true,
