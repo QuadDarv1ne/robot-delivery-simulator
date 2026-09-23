@@ -42,7 +42,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await fetch('/api/user/me', { cache: 'no-store' })
       if (response.ok) {
         const data = await response.json()
-        setUser(data.user)
+        // /api/user/me оборачивает ответ в { data: { user } }
+        setUser(data.user ?? data.data?.user ?? null)
       } else if (response.status === 401) {
         setUser(null)
       }
@@ -131,7 +132,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const updated = await response.json()
-      setUser(prev => prev ? { ...prev, ...updated.user } : null)
+      // /api/user/profile оборачивает ответ в { data: { user } }
+      const updatedUser = updated.user ?? updated.data?.user
+      setUser(prev => prev ? { ...prev, ...updatedUser } : null)
       toast.success('Профиль обновлён')
     } catch (error) {
       // Error is already handled with toast above
