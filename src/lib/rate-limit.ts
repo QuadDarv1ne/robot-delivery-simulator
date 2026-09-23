@@ -14,17 +14,17 @@ const clients = new Map<string, ClientData>()
 
 const defaultConfig: RateLimitConfig = {
   interval: 60 * 1000, // 1 minute
-  maxRequests: 10,
+  maxRequests: 60,
 }
 
 const authConfig: RateLimitConfig = {
   interval: 15 * 60 * 1000, // 15 minutes
-  maxRequests: process.env.NODE_ENV === 'development' ? 50 : 5,
+  maxRequests: process.env.NODE_ENV === 'development' ? 200 : 30,
 }
 
 const apiConfig: RateLimitConfig = {
   interval: 60 * 1000, // 1 minute
-  maxRequests: 30,
+  maxRequests: 120,
 }
 
 function cleanupExpiredEntries() {
@@ -81,7 +81,7 @@ export function rateLimit(
   }
 }
 
-export function createRateLimitResponse(resetTime: number): NextResponse {
+export function createRateLimitResponse(resetTime: number, limit: number = defaultConfig.maxRequests): NextResponse {
   const retryAfter = Math.ceil((resetTime - Date.now()) / 1000)
 
   return NextResponse.json(
@@ -93,7 +93,7 @@ export function createRateLimitResponse(resetTime: number): NextResponse {
     {
       status: 429,
       headers: {
-        'X-RateLimit-Limit': '10',
+        'X-RateLimit-Limit': limit.toString(),
         'X-RateLimit-Remaining': '0',
         'X-RateLimit-Reset': resetTime.toString(),
         'Retry-After': retryAfter.toString(),

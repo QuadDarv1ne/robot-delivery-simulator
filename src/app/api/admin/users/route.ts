@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
   try {
     const rateLimitResult = rateLimit(request, rateLimits.api)
     if (rateLimitResult.limited) {
-      return createRateLimitResponse(rateLimitResult.resetTime)
+      return createRateLimitResponse(rateLimitResult.resetTime, rateLimits.api.maxRequests)
     }
 
     const admin = await checkAdmin()

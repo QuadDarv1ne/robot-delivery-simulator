@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
   const limit = rateLimit(request, rateLimits.api)
 
   if (limit.limited) {
-    return createRateLimitResponse(limit.resetTime)
+    return createRateLimitResponse(limit.resetTime, rateLimits.api.maxRequests)
   }
 
   try {

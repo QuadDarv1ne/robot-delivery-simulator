@@ -40,7 +40,7 @@ export function proxy(request: NextRequest) {
   response.headers.set('X-RateLimit-Reset', limit.resetTime.toString())
 
   if (limit.limited) {
-    return createRateLimitResponse(limit.resetTime)
+    return createRateLimitResponse(limit.resetTime, config.maxRequests)
   }
 
   return response

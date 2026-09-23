@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
   try {
     const limit = rateLimit(request, rateLimits.auth)
     if (limit.limited) {
-      return createRateLimitResponse(limit.resetTime)
+      return createRateLimitResponse(limit.resetTime, rateLimits.auth.maxRequests)
     }
 
     const body = await request.json()
