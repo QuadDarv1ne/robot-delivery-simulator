@@ -353,6 +353,18 @@ npm i -g vercel
 vercel
 ```
 
+Для Vercel задайте `DATABASE_URL` внешней PostgreSQL-базой и `NEXTAUTH_SECRET`.
+SQLite-файл не сохраняется между запусками serverless-функций. WebSocket-сервис
+также нужно разместить отдельно, а его публичный адрес указать в
+`NEXT_PUBLIC_SIMULATOR_URL` (например, `wss://simulator.example.com`).
+
+### Amvera
+
+В репозитории есть готовый `amvera.yaml`: Amvera автоматически соберет
+`docker/Dockerfile`, откроет порт `3000` и сохранит SQLite в `/app/data`.
+Перед запуском задайте в настройках приложения `NEXTAUTH_SECRET` и
+`NEXTAUTH_URL`. Схема Prisma применяется контейнером автоматически.
+
 ### Railway
 
 [![Развернуть на Railway](https://railway.app/button.svg)](https://railway.app/template/robot-simulator)

@@ -14,12 +14,12 @@ import type {
 
 export type { RobotState, SensorData, SimulatorState } from '@/types/websocket'
 
-// WebSocket server URL from environment variable or default to localhost
+// The WebSocket service is deployed separately from the Next.js application.
 const SIMULATOR_SERVER_URL =
   process.env.NEXT_PUBLIC_SIMULATOR_URL ||
   (typeof window !== 'undefined' && window.location.hostname === 'localhost'
     ? 'http://localhost:3003'
-    : `https://${window.location.hostname}:3003`)
+    : undefined)
 
 export function useSimulator() {
   const isOnline = useOnlineStatus()

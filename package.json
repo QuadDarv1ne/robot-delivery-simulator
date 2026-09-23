@@ -32,9 +32,9 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "dev": "concurrently \"next dev -p 3000\" \"cd mini-services/robot-simulator-server && bun run index.ts\" 2>&1 | tee dev.log",
-    "build": "next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
-    "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
+    "dev": "concurrently \"next dev -p 3000\" \"cd mini-services/robot-simulator-server && bun run index.ts\"",
+    "build": "next build",
+    "start": "node .next/standalone/server.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "type-check": "tsc --noEmit",

@@ -33,10 +33,6 @@ jest.mock('socket.io-client', () => ({
   })),
 }))
 
-// Mock window.location for Leaderboard component
-delete (window as any).location
-;(window as any).location = { origin: 'http://localhost:3000', href: 'http://localhost:3000/', hostname: 'localhost', protocol: 'http:' }
-
 // Mock ResizeObserver for recharts
 ;(global as any).ResizeObserver = class ResizeObserver {
   observe() {}

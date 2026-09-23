@@ -34,6 +34,7 @@ WORKDIR /app
 
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
+ENV DATABASE_URL file:/app/data/production.db
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
@@ -44,7 +45,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/mini-services ./mini-services
 
 # Copy package.json for version info
@@ -65,4 +66,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
 # Start both servers
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "npx prisma db push --skip-generate && exec node server.js"]

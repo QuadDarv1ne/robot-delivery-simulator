@@ -32,12 +32,6 @@
       ]
     }
   ],
-  "rewrites": [
-    {
-      "source": "/socket.io/:path*",
-      "destination": "http://localhost:3003/socket.io/:path*"
-    }
-  ],
   "env": {
     "NEXT_TELEMETRY_DISABLED": "1"
   }
