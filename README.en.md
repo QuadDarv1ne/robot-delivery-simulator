@@ -349,7 +349,8 @@ npm i -g vercel
 vercel
 ```
 
-`vercel.json` automatically runs `prisma generate` before the build. Add these
+`vercel.json` automatically runs `prisma generate` and applies the Prisma schema
+before the build. Add these
 variables in Vercel Project Settings -> Environment Variables:
 `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `NEXT_PUBLIC_APP_URL`, and
 `NEXT_PUBLIC_SIMULATOR_URL`. Deploy the WebSocket service separately.

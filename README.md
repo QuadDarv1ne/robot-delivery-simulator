@@ -370,7 +370,8 @@ vercel
 ```
 
 Для Vercel задайте `DATABASE_URL` внешней PostgreSQL-базой и `NEXTAUTH_SECRET`.
-`vercel.json` автоматически запускает `prisma generate` перед сборкой.
+`vercel.json` автоматически запускает `prisma generate` и применяет Prisma-схему
+к базе перед сборкой.
 Переменные добавьте в Vercel Project Settings → Environment Variables:
 `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `NEXT_PUBLIC_APP_URL` и
 `NEXT_PUBLIC_SIMULATOR_URL`. WebSocket-сервис нужно разместить отдельно.
