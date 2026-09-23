@@ -34,7 +34,6 @@ WORKDIR /app
 
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
-ENV DATABASE_URL file:/app/data/production.db
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs

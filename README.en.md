@@ -245,8 +245,8 @@ robot-delivery-simulator/
 Create a `.env` file in the root directory:
 
 ```env
-# Database
-DATABASE_URL="file:./dev.db"
+# PostgreSQL database
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require"
 
 # Authentication
 NEXTAUTH_SECRET="your-secret-key-here"

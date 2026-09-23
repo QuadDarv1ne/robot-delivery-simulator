@@ -20,7 +20,7 @@ jest.mock('next/navigation', () => ({
 }))
 
 // Mock environment variables
-process.env.DATABASE_URL = 'file:./test.db'
+process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test?schema=public'
 process.env.NEXTAUTH_SECRET = 'test-secret-key-for-jest-tests-only'
 process.env.NEXTAUTH_URL = 'http://localhost:3000'
 

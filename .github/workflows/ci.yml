@@ -8,7 +8,7 @@ on:
 
 env:
   NODE_VERSION: '20'
-  DATABASE_URL: 'file:./dev.db'
+  DATABASE_URL: 'postgresql://test:test@localhost:5432/test?schema=public'
   NEXTAUTH_SECRET: 'test-secret-key-for-ci-pipeline-only'
   NEXTAUTH_URL: 'http://localhost:3000'
   NEXT_TELEMETRY_DISABLED: '1'

@@ -12,11 +12,10 @@ services:
       - "3003:3003"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=file:/app/data/production.db
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-change-me-in-production}
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
     volumes:
-      - sqlite-data:/app/data
       - uploads-data:/app/public/uploads
     restart: unless-stopped
     healthcheck:
@@ -39,13 +38,12 @@ services:
       - "3003:3003"
     environment:
       - NODE_ENV=development
-      - DATABASE_URL=file:/app/data/dev.db
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
       - NEXTAUTH_SECRET=dev-secret-key
       - NEXTAUTH_URL=http://localhost:3000
     volumes:
       - .:/app
       - /app/node_modules
-      - sqlite-dev-data:/app/data
     profiles:
       - dev
     networks:
@@ -70,8 +68,6 @@ services:
       - robot-network
 
 volumes:
-  sqlite-data:
-  sqlite-dev-data:
   uploads-data:
 
 networks:

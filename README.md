@@ -245,8 +245,8 @@ robot-delivery-simulator/
 Создайте файл `.env` в корневой директории:
 
 ```env
-# База данных
-DATABASE_URL="file:./dev.db"
+# База данных PostgreSQL
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require"
 
 # Авторизация
 NEXTAUTH_SECRET="ваш-секретный-ключ"
