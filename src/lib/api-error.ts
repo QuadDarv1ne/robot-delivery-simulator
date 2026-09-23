@@ -120,8 +120,13 @@ export function handleApiError(error: unknown, context: string): NextResponse {
   })
 }
 
+/**
+ * Успешный JSON-ответ.
+ * Полезная нагрузка возвращается на верхнем уровне (без обёртки { data: ... }),
+ * так как все клиентские компоненты читают поля напрямую: data.user, data.scenarios и т.д.
+ */
 export function successResponse<T>(data: T, status = 200) {
-  return NextResponse.json({ data }, { status })
+  return NextResponse.json(data, { status })
 }
 
 export function createSuccessResponse<T>(data: T, status = 200) {

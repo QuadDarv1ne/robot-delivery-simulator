@@ -222,7 +222,7 @@ describe('API Error Handling Utilities', () => {
       const data = { items: [1, 2, 3] }
       const response = successResponse(data) as any
       
-      expect(response.data).toEqual({ data })
+      expect(response.data).toEqual(data)
       expect(response.options).toEqual({ status: 200 })
     })
 
@@ -230,7 +230,7 @@ describe('API Error Handling Utilities', () => {
       const data = { created: true }
       const response = successResponse(data, 201) as any
       
-      expect(response.data).toEqual({ data })
+      expect(response.data).toEqual(data)
       expect(response.options).toEqual({ status: 201 })
     })
   })
