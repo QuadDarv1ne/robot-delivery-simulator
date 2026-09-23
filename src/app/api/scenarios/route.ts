@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { getSessionUser } from '@/lib/session'
 import { scenarioCreateSchema, scenarioUpdateSchema } from '@/lib/validators'
 import { handleApiError, createErrorResponse, successResponse } from '@/lib/api-error'
 
@@ -61,14 +60,12 @@ export async function GET(request: NextRequest) {
 // POST - Create scenario
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
+    const user = await getSessionUser()
+    if (!user) {
       return createErrorResponse({ message: 'Не авторизован', status: 401, context: 'Scenarios.POST' })
     }
 
-    const user = await db.user.findUnique({ where: { email: session.user.email } })
-
-    if (!user || (user.role !== 'teacher' && user.role !== 'admin')) {
+    if (user.role !== 'teacher' && user.role !== 'admin') {
       return createErrorResponse({ message: 'Недостаточно прав', status: 403, context: 'Scenarios.POST' })
     }
 
@@ -116,18 +113,9 @@ export async function POST(request: NextRequest) {
 // PUT - Update scenario
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return createErrorResponse({ message: 'Не авторизован', status: 401, context: 'Scenarios.PUT' })
-    }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true, role: true }
-    })
-
+    const user = await getSessionUser()
     if (!user) {
-      return createErrorResponse({ message: 'Пользователь не найден', status: 404, context: 'Scenarios.PUT' })
+      return createErrorResponse({ message: 'Не авторизован', status: 401, context: 'Scenarios.PUT' })
     }
 
     const body = await request.json()
@@ -164,18 +152,9 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete scenario
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return createErrorResponse({ message: 'Не авторизован', status: 401, context: 'Scenarios.DELETE' })
-    }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true, role: true }
-    })
-
+    const user = await getSessionUser()
     if (!user) {
-      return createErrorResponse({ message: 'Пользователь не найден', status: 404, context: 'Scenarios.DELETE' })
+      return createErrorResponse({ message: 'Не авторизован', status: 401, context: 'Scenarios.DELETE' })
     }
 
     const searchParams = request.nextUrl.searchParams

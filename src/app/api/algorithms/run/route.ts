@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { getSessionUser } from '@/lib/session'
 import { algorithmRunSchema } from '@/lib/validators'
 import { handleApiError, createErrorResponse, successResponse } from '@/lib/api-error'
 
@@ -169,17 +168,9 @@ function simulateAlgorithm(code: string): SimulationResult {
 // POST - Run algorithm simulation
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return createErrorResponse({ message: 'Не авторизован', status: 401 })
-    }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email }
-    })
-
+    const user = await getSessionUser()
     if (!user) {
-      return createErrorResponse({ message: 'Пользователь не найден', status: 404 })
+      return createErrorResponse({ message: 'Не авторизован', status: 401 })
     }
 
     const body = await request.json()

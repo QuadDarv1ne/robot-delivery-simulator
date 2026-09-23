@@ -1,23 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { getSessionUser } from '@/lib/session'
 import { createErrorResponse } from '@/lib/api-error'
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
+    const sessionUser = await getSessionUser()
+    if (!sessionUser) {
       return createErrorResponse({ message: 'Не авторизован', status: 401 })
     }
 
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true, name: true, role: true, group: true }
-    })
-
-    if (!user) {
-      return createErrorResponse({ message: 'Пользователь не найден', status: 404 })
+    const user = {
+      id: sessionUser.id,
+      name: sessionUser.name,
+      role: sessionUser.role,
+      group: sessionUser.group
     }
 
     const searchParams = request.nextUrl.searchParams

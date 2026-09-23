@@ -1,24 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { getSessionUser } from '@/lib/session'
 import { algorithmIdSchema } from '@/lib/validators'
 import { handleApiError, successResponse } from '@/lib/api-error'
 
 // GET - List favorite algorithms
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-    }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email }
-    })
-
+    const user = await getSessionUser()
     if (!user) {
-      return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 })
+      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
     }
 
     const favorites = await db.favoriteAlgorithm.findMany({
@@ -50,17 +41,9 @@ export async function GET(request: NextRequest) {
 // POST - Add to favorites
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-    }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email }
-    })
-
+    const user = await getSessionUser()
     if (!user) {
-      return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 })
+      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -131,17 +114,9 @@ export async function POST(request: NextRequest) {
 // DELETE - Remove from favorites
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
-    }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email }
-    })
-
+    const user = await getSessionUser()
     if (!user) {
-      return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 })
+      return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
     }
 
     const searchParams = request.nextUrl.searchParams

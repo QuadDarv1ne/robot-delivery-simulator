@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { getSessionUser } from '@/lib/session'
 import { z } from 'zod'
 import { handleApiError, createErrorResponse, successResponse } from '@/lib/api-error'
 
@@ -80,8 +79,8 @@ function analyzeRouteComplexity(waypoints: number, obstacles: number, difficulty
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    const user = await getSessionUser()
+    if (!user) {
       return createErrorResponse({
         message: 'Требуется авторизация',
         status: 401
