@@ -34,6 +34,7 @@
   "scripts": {
     "dev": "concurrently \"next dev -p 3000\" \"cd mini-services/robot-simulator-server && bun run index.ts\"",
     "build": "next build",
+    "vercel-build": "prisma generate && next build",
     "start": "node .next/standalone/server.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

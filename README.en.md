@@ -5,9 +5,11 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Prisma](https://img.shields.io/badge/Prisma-6.0-2D3748?logo=prisma)](https://www.prisma.io/)
 
-A comprehensive 3D robot delivery simulator with Unity WebGL integration, ROS/ROS2 support, and real-time sensor visualization. Perfect for educational purposes, robotics research, and algorithm development.
+A comprehensive 3D robot delivery simulator with Unity WebGL integration,
+ROS/ROS2 support, and real-time sensor visualization. It is designed for
+education, robotics research, and algorithm development.
 
-![Robot Simulator Preview](./docs/images/simulator-preview.png)
+![Robot Simulator Preview](./img/2026-03-13-v1.png)
 
 ## 📖 Documentation
 
@@ -17,36 +19,42 @@ A comprehensive 3D robot delivery simulator with Unity WebGL integration, ROS/RO
 ## ✨ Features
 
 ### 🎮 Simulation
+
 - **Unity WebGL Integration** - Embedded 3D simulation environment
 - **Real-time Sensor Data** - GPS, Lidar, IMU, Encoders at 10Hz
 - **Physics-based Movement** - Realistic robot dynamics
 - **Obstacle Detection** - Dynamic collision avoidance testing
 
 ### 🗺️ Visualization
+
 - **OpenStreetMap Integration** - Real-world map rendering with Leaflet
 - **3D Lidar Point Cloud** - Three.js powered visualization with distance color-coding
 - **Real-time Robot Tracking** - Live position and trajectory display
 - **Route Planning** - Visual path and waypoint system
 
 ### 📦 Delivery Scenarios
+
 - **4 Built-in Missions** - Varying difficulty levels
 - **Weather Conditions** - Sun, rain, snow simulation
 - **Traffic Patterns** - Low, medium, high traffic
 - **Obstacle Complexity** - Configurable obstacle density
 
 ### 📊 Analytics
+
 - **Performance Charts** - Speed, battery, distance tracking
 - **Session History** - Detailed delivery records
 - **Success Rate Metrics** - User performance statistics
 - **Collision Tracking** - Safety analysis
 
 ### 🔐 Authentication & Management
+
 - **Role-based Access** - Student, Teacher, Admin roles
 - **Password Recovery** - Secure reset flow
 - **User Management** - Complete admin panel
 - **Achievement System** - Gamification for students
 
 ### 🔌 Integration
+
 - **WebSocket API** - Real-time data streaming (port 3003)
 - **REST API** - Full CRUD operations
 - **ROS/ROS2 Ready** - External control system support
@@ -59,7 +67,7 @@ A comprehensive 3D robot delivery simulator with Unity WebGL integration, ROS/RO
 
 - Node.js 18+
 - npm or bun
-- SQLite (included)
+- PostgreSQL 14+
 
 ### 📋 Step-by-Step Installation Guide
 
@@ -77,8 +85,8 @@ cd robot-delivery-simulator
 cp .env.example .env
 ```
 
-> **Important:** In the `.env` file, change `NEXTAUTH_SECRET` to a random string.  
-> For generation, use: `openssl rand -base64 32`
+> **Important:** In the `.env` file, change `NEXTAUTH_SECRET` to a random
+> string. For generation, use: `openssl rand -base64 32`
 
 #### Step 3: Install Dependencies
 
@@ -106,6 +114,7 @@ npm run seed
 #### Step 6: Run the Application
 
 **Option A — Single command (both servers):**
+
 ```bash
 npm run dev:all
 ```
@@ -113,41 +122,45 @@ npm run dev:all
 **Option B — In two separate terminals:**
 
 *Terminal 1 — Next.js application (port 3000):*
+
 ```bash
 npm run dev
 ```
 
 *Terminal 2 — WebSocket server (port 3003):*
+
 ```bash
 npm run websocket
 ```
 
 #### Step 7: Open in Browser
 
-Go to **http://localhost:3000**
+Go to **<http://localhost:3000>**
 
 ### 🔑 Demo Credentials
 
 | Field | Value |
-|-------|-------|
+| --- | --- |
 | **Email** | `demo@test.ru` |
 | **Password** | `demo123` |
 
 ### ⚠️ Troubleshooting
 
 **WebSocket connection error:**
+
 - Make sure the server on port 3003 is running
 - Check for port conflicts
 
 **Database error:**
+
 ```bash
-# Remove old database and recreate
-rm prisma/dev.db
+# Check DATABASE_URL and apply the current schema
 npx prisma db push
 npm run seed
 ```
 
-**Dependencies issues:**
+**Dependency issues:**
+
 ```bash
 # Clear cache and reinstall
 rm -rf node_modules package-lock.json
@@ -157,7 +170,7 @@ npm install
 ## 🛠️ Available Commands
 
 | Command | Description |
-|---------|-------------|
+| --------- | ------------- |
 | `npm run dev` | Start Next.js app (port 3000) |
 | `npm run websocket` | Start WebSocket server (port 3003) |
 | `npm run dev:all` | Start both servers simultaneously |
@@ -181,7 +194,7 @@ npm install
 
 ## 🏗️ Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                     Frontend (Next.js 16)                    │
 ├─────────────────────────────────────────────────────────────┤
@@ -196,13 +209,13 @@ npm install
 │  │ Auth Service │  │ User Service │  │Data Service  │      │
 │  └──────────────┘  └──────────────┘  └──────────────┘      │
 ├─────────────────────────────────────────────────────────────┤
-│                    Database (SQLite + Prisma)                │
+│                  Database (PostgreSQL + Prisma)              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ## 📁 Project Structure
 
-```
+```text
 robot-delivery-simulator/
 ├── src/
 │   ├── app/                    # Next.js App Router
@@ -259,7 +272,7 @@ UNITY_WEBGL_URL="http://localhost:8080"
 
 ### Database Schema
 
-The application uses Prisma with SQLite. Key models:
+The application uses Prisma with PostgreSQL. Key models:
 
 - **User** - User accounts with roles (student/teacher/admin)
 - **UserSession** - Session management
@@ -336,13 +349,19 @@ npm i -g vercel
 vercel
 ```
 
+`vercel.json` automatically runs `prisma generate` before the build. Add these
+variables in Vercel Project Settings -> Environment Variables:
+`DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `NEXT_PUBLIC_APP_URL`, and
+`NEXT_PUBLIC_SIMULATOR_URL`. Deploy the WebSocket service separately.
+
 ### Railway
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/robot-simulator)
 
 ### Self-hosted
 
-See [deployment guide](./docs/deployment.md) for detailed instructions.
+See [railway.json](./railway.json) and the
+[Docker configuration](./docker/Dockerfile) for deployment settings.
 
 ## 🧪 Testing
 
@@ -359,7 +378,8 @@ npm run test:coverage
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](./CONTRIBUTING.md) for details.
+We welcome contributions! Please see our
+[Contributing Guide](./CONTRIBUTING.md) for details.
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -369,7 +389,8 @@ We welcome contributions! Please see our [Contributing Guide](./CONTRIBUTING.md)
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+This project is licensed under the MIT License - see the
+[LICENSE](./LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
@@ -382,7 +403,7 @@ This project is licensed under the MIT License - see the [LICENSE](./LICENSE) fi
 
 ## 📞 Support
 
-- 📧 Email: support@robotsimulator.dev
+- 📧 Email: <support@robotsimulator.dev>
 - 💬 Discord: [Join our community](https://discord.gg/robotsimulator)
 - 📖 Documentation: [docs.robotsimulator.dev](https://docs.robotsimulator.dev)
 - 🐛 Issues: [GitHub Issues](https://github.com/QuadDarv1ne/robot-delivery-simulator/issues)
